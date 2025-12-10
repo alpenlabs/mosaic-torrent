@@ -15,5 +15,6 @@ workspace = true
 
 [dependencies]
 bip_metainfo = "0.12"
+thiserror = "2.0"
 
 [dev-dependencies]
