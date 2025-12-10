@@ -3,15 +3,54 @@
 //! This crate defines common types and traits for BitTorrent clients used in the Mosaic project.
 
 use bip_metainfo::{MetainfoBuilder, PieceLength};
+use thiserror::Error;
+
+/// Error type for BitTorrent operations.
+#[derive(Error, Debug)]
+pub enum BitTorrentError {
+    /// Network-related errors (connection failures, timeouts, etc.)
+    #[error("network error: {0}")]
+    Network(String),
+
+    /// Authentication errors
+    #[error("authentication required")]
+    Unauthorized,
+
+    /// Server returned an error response
+    #[error("server error: {0}")]
+    ServerError(String),
+
+    /// Invalid torrent file or data
+    #[error("invalid torrent: {0}")]
+    InvalidTorrent(String),
+
+    /// File system errors (file not found, permission denied, etc.)
+    #[error("file system error: {0}")]
+    FileSystem(String),
+
+    /// Other unexpected errors
+    #[error("unexpected error: {0}")]
+    Other(String),
+}
 
 /// Create a torrent file from a folder.
 /// This is not BitTorrent client specific, so it is not part of the BitTorrent trait.
-pub fn create_torrent_file(folder: &str, output_file: &str, tracker_url: Option<&str>) {
+pub fn create_torrent_file(
+    folder: &str,
+    output_file: &str,
+    tracker_url: Option<&str>,
+) -> Result<(), BitTorrentError> {
     let builder = MetainfoBuilder::new()
         .set_piece_length(PieceLength::OptBalanced)
         .set_main_tracker(tracker_url);
-    let bytes = builder.build(1, folder, |_| {}).unwrap();
-    std::fs::write(output_file, bytes).unwrap();
+
+    let bytes = builder
+        .build(1, folder, |_| {})
+        .map_err(|e| BitTorrentError::InvalidTorrent(e.to_string()))?;
+
+    std::fs::write(output_file, bytes).map_err(|e| BitTorrentError::FileSystem(e.to_string()))?;
+
+    Ok(())
 }
 
 #[allow(async_fn_in_trait)]
@@ -19,15 +58,20 @@ pub fn create_torrent_file(folder: &str, output_file: &str, tracker_url: Option<
 pub trait BitTorrent {
     /// Add a torrent file to Transmission. The torrents starts downloading/seeding immediately.
     /// This can be used to download a torrent, and also to seed a torrent.
-    async fn add(&self, torrent_file: &str, download_dir: &str) -> Torrent;
+    async fn add(&self, torrent_file: &str, download_dir: &str)
+    -> Result<Torrent, BitTorrentError>;
     /// Stop torrents by their IDs. The IDs should be the torrent hash.
-    async fn stop(&self, ids: Vec<String>);
+    async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError>;
     /// List all torrents.
-    async fn list(&self) -> Vec<Torrent>;
+    async fn list(&self) -> Result<Vec<Torrent>, BitTorrentError>;
     /// Remove torrents by their IDs (torrent hash). If `delete_local_data` is true, the local data will also be deleted.
-    async fn remove(&self, ids: Vec<String>, delete_local_data: bool);
+    async fn remove(
+        &self,
+        ids: Vec<String>,
+        delete_local_data: bool,
+    ) -> Result<(), BitTorrentError>;
     /// Get session statistics.
-    async fn stats(&self) -> SessionStats;
+    async fn stats(&self) -> Result<SessionStats, BitTorrentError>;
 }
 
 // The below are copied from Transmission RPC types, as this will be the initial implementation.
@@ -121,7 +165,7 @@ pub struct Torrent {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn create_torrent() {
+    fn create_torrent() -> Result<(), super::BitTorrentError> {
         std::fs::create_dir_all("target/test_data/create_torrent").unwrap();
         std::fs::write(
             "target/test_data/create_torrent/file.txt",
@@ -132,8 +176,9 @@ mod tests {
             "target/test_data/create_torrent",
             "target/test_data/create_torrent/test.torrent",
             None,
-        );
+        )?;
         assert!(std::path::Path::new("target/test_data/create_torrent/test.torrent").exists());
         std::fs::remove_dir_all("target/test_data/create_torrent").unwrap();
+        Ok(())
     }
 }

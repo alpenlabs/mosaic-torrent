@@ -1,12 +1,33 @@
 //! # Torrent controller using Transmission RPC.
 //!
+//! usage:
+//!
+//! ```rust,ignore
+//! use mosaic_torrent_controller::TransmissionClient;
+//! use mosaic_torrent_types::{BitTorrent, create_torrent_file};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     create_torrent_file(
+//!         "path/to/folder",
+//!         "path/to/output/file.torrent",
+//!         None,
+//!     )?;
+//!     let client = TransmissionClient::try_new(None, Some("/path/to/incomplete/dir"), 1).await?;
+//!     let torrent = client.add("path/to/output/file.torrent", "/path/to/download/dir").await?;
+//!     println!("Added torrent: {:?}", torrent);
+//!     Ok(())
+//! }
+//! ```
+//!
+
 use transmission_client::{
-    Client, SessionMutator, SessionStats as TransmissionSessionStats,
+    Client, ClientError, SessionMutator, SessionStats as TransmissionSessionStats,
     StatsDetails as TransmissionStatsDetails, Torrent as TransmissionTorrent,
 };
 use url::Url;
 
-use mosaic_torrent_types::{BitTorrent, SessionStats, StatsDetails, Torrent};
+use mosaic_torrent_types::{BitTorrent, BitTorrentError, SessionStats, StatsDetails, Torrent};
 
 /// TransmissionClient is a BitTorrent client that uses Transmission RPC.
 #[allow(missing_debug_implementations)]
@@ -19,12 +40,14 @@ impl TransmissionClient {
     /// If no RPC URL is provided, it defaults to "http://localhost:9091/transmission/rpc".
     /// This method is async as the session settings are applied on creation.
     /// An incomplete directory can also be specified. If None is provided, it defaults to "/tmp/transmission/incomplete".
-    pub async fn new(
+    pub async fn try_new(
         rpc_url: Option<&str>,
         incomplete_dir: Option<&str>,
         max_downloads: u32,
-    ) -> Self {
-        let url = Url::parse(rpc_url.unwrap_or("http://localhost:9091/transmission/rpc")).unwrap();
+    ) -> Result<Self, BitTorrentError> {
+        let url = Url::parse(rpc_url.unwrap_or("http://localhost:9091/transmission/rpc"))
+            .map_err(|e| BitTorrentError::Other(format!("Invalid RPC URL: {}", e)))?;
+
         let client = Client::new(url);
         let incomplete_dir = incomplete_dir.unwrap_or("/tmp/transmission/incomplete");
         let session_mutator = SessionMutator {
@@ -34,46 +57,83 @@ impl TransmissionClient {
             download_queue_size: Some(max_downloads as i32),
             ..Default::default()
         };
-        client.session_set(session_mutator).await.unwrap();
-        Self { client }
+
+        client
+            .session_set(session_mutator)
+            .await
+            .map_err(map_client_error)?;
+
+        Ok(Self { client })
     }
 }
 
 impl BitTorrent for TransmissionClient {
-    async fn add(&self, torrent_file: &str, download_dir: &str) -> Torrent {
-        TransmissionTorrentWrapper(
-            self.client
-                .torrent_add_filename_download_dir(torrent_file, download_dir)
-                .await
-                .unwrap()
-                .unwrap(),
-        )
-        .into()
+    async fn add(
+        &self,
+        torrent_file: &str,
+        download_dir: &str,
+    ) -> Result<Torrent, BitTorrentError> {
+        let torrent = self
+            .client
+            .torrent_add_filename_download_dir(torrent_file, download_dir)
+            .await
+            .map_err(map_client_error)?
+            .ok_or_else(|| BitTorrentError::InvalidTorrent("No torrent returned".into()))?;
+
+        Ok(TransmissionTorrentWrapper(torrent).into())
     }
 
-    async fn stop(&self, ids: Vec<String>) {
-        self.client.torrent_stop(Some(ids)).await.unwrap();
-    }
-
-    async fn list(&self) -> Vec<Torrent> {
+    async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError> {
         self.client
+            .torrent_stop(Some(ids))
+            .await
+            .map_err(map_client_error)?;
+        Ok(())
+    }
+
+    async fn list(&self) -> Result<Vec<Torrent>, BitTorrentError> {
+        let torrents = self
+            .client
             .torrents(None)
             .await
-            .unwrap()
+            .map_err(map_client_error)?
             .into_iter()
             .map(|t| TransmissionTorrentWrapper(t).into())
-            .collect()
+            .collect();
+
+        Ok(torrents)
     }
 
-    async fn remove(&self, ids: Vec<String>, delete_local_data: bool) {
+    async fn remove(
+        &self,
+        ids: Vec<String>,
+        delete_local_data: bool,
+    ) -> Result<(), BitTorrentError> {
         self.client
             .torrent_remove(Some(ids), delete_local_data)
             .await
-            .unwrap();
+            .map_err(map_client_error)?;
+        Ok(())
     }
 
-    async fn stats(&self) -> SessionStats {
-        TransmissionSessionStatsWrapper(self.client.session_stats().await.unwrap()).into()
+    async fn stats(&self) -> Result<SessionStats, BitTorrentError> {
+        let stats = self
+            .client
+            .session_stats()
+            .await
+            .map_err(map_client_error)?;
+
+        Ok(TransmissionSessionStatsWrapper(stats).into())
+    }
+}
+
+// Error conversion helper
+fn map_client_error(err: ClientError) -> BitTorrentError {
+    match err {
+        ClientError::TransmissionUnauthorized => BitTorrentError::Unauthorized,
+        ClientError::TransmissionError(msg) => BitTorrentError::ServerError(msg),
+        ClientError::NetworkError(e) => BitTorrentError::Network(e.to_string()),
+        ClientError::SerdeError(e) => BitTorrentError::Other(e.to_string()),
     }
 }
 
