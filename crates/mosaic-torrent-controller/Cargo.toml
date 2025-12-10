@@ -1,0 +1,18 @@
+[package]
+name = "mosaic-torrent-controller"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "A torrent controller for Mosaic"
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]

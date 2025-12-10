@@ -1,20 +1,26 @@
 [workspace]
-members = ["crates/foo"]
+members = [
+  "crates/mosaic-opendal-fuse",
+  "crates/mosaic-torrent-controller",
+  "crates/mosaic-torrent-types",
+]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.0" # CHANGEME
-edition = "2024" # CHANGEME
+version = "0.0.1"
+edition = "2024"
 authors = [
-  "John Doe <noreply@alpenlabs.io>",  # CHANGEME
-  "Janet Doe <noreply@alpenlabs.io>", # CHANGEME
+  "Eloy Lopez <eloy@eiger.co>",
+  "Jonathan Andersson <jonathan@equilibrium.co",
+  "Jos Dehaes <jos@eiger.co>",
 ]
-description = "Alpen Rust Workspace Template" # CHANGEME
-license = "MIT OR Apache-2.0" # CHANGEME
+description = "Mosaic Torrent Orchestration"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/alpenlabs/rust-template-workspace" # CHANGEME
-categories = ["cryptography::cryptocurrencies"] # CHANGEME
-keywords = ["crypto", "bitcoin"] # CHANGEME
+repository = "https://github.com/alpenlabs/mosaic-torrent"
+categories = ["cryptography::cryptocurrencies"]
+keywords = ["crypto", "bitcoin"]
+
 
 [workspace.lints]
 rust.missing_debug_implementations = "warn"

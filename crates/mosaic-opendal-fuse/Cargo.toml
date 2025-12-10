@@ -1,9 +1,9 @@
 [package]
-name = "alpen-rust-template" # CHANGEME
+name = "mosaic-opendal-fuse"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "CHANGE ME"
+description = "A FUSE filesystem for OpenDAL"
 license.workspace = true
 readme = "README.md"
 repository.workspace = true
