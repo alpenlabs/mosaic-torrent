@@ -14,5 +14,6 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
+bip_metainfo = "0.12"
 
 [dev-dependencies]

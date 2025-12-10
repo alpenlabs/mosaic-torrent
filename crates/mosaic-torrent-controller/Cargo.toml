@@ -14,5 +14,8 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
+mosaic-torrent-types = { path = "../mosaic-torrent-types" }
+transmission-client = { git = "https://github.com/joske/transmission-client.git", branch = "master" }
+url = "2.5"
 
 [dev-dependencies]
