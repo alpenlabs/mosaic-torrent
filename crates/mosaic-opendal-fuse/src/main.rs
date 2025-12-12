@@ -6,7 +6,7 @@
 //! cargo run --release --bin mosaic-opendal-fuse
 //! ```
 
-use fuse3::MountOptions;
+use fuse3 as _;
 use fuse3_opendal as _;
 use opendal as _;
 use thiserror as _;
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = OpenDALFuseConfiguration::default();
     let adapter = S3OpenDALFuseAdapter::new(config)?;
 
-    let mut mount_handle = adapter.start_session(MountOptions::default()).await?;
+    let mut mount_handle = adapter.start_session().await?;
     let handle = &mut mount_handle;
 
     tokio::select! {
