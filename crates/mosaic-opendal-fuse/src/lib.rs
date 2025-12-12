@@ -24,6 +24,8 @@ use fuse3_opendal::Filesystem;
 use opendal::{Operator, services::S3};
 use thiserror::Error;
 use tokio as _;
+use tracing::{error, info, instrument};
+use tracing_subscriber as _;
 
 /// Error variants for [`S3OpenDALFuseAdapter`].
 #[derive(Error, Debug)]
@@ -89,17 +91,29 @@ impl S3OpenDALFuseAdapter {
     /// Returns a new [`S3OpenDALFuseAdapter`] with the specified [`OpenDALFuseConfiguration`]. Configuration
     /// for the OpenDAL operator is read from the environment.
     pub fn new(config: OpenDALFuseConfiguration) -> Result<Self, Error> {
+        info!("Creating OpenDAL operator...");
         let builder = S3::default();
         let operator = Operator::new(builder)
-            .map_err(|e| Error::OpenDALOperatorInitError(e.to_string()))?
+            .map_err(|e| {
+                error!("Failed to create OpenDAL operator: {}", e);
+                Error::OpenDALOperatorInitError(e.to_string())
+            })?
             .finish();
+        info!("OpenDAL operator created successfully");
         Ok(Self::new_with_operator(config, operator))
     }
 
     /// Returns a new [`S3OpenDALFuseAdapter`] with the specified [`OpenDALFuseConfiguration`] and
-    /// a custom [`Operator`] for use in testing.
+    /// a custom [`Operator`]. Not meant to be called directly outside of testing, prefer
+    /// [`S3OpenDALFuseAdapter::new`] instead.
     #[doc(hidden)]
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
+        tracing::info!(
+            mount_directory = %config.mount_directory,
+            uid = config.uid,
+            gid = config.gid,
+            "Creating S3OpenDALFuseAdapter with configuration"
+        );
         Self { config, operator }
     }
 
@@ -109,16 +123,30 @@ impl S3OpenDALFuseAdapter {
     ///
     /// The caller **must** remember to call [`MountHandle::unmount`] when the mount is no longer
     /// needed to shutdown the session cleanly and safely.
+    #[instrument(skip(self), fields(mount_dir = %self.config.mount_directory))]
     pub async fn start_session(self) -> Result<MountHandle, Error> {
-        fs::create_dir_all(&self.config.mount_directory)
-            .map_err(|e| Error::IoError(e.to_string()))?;
+        info!(
+            "Creating mount directory at {}",
+            self.config.mount_directory
+        );
+        fs::create_dir_all(&self.config.mount_directory).map_err(|e| {
+            error!("Failed to create mount directory: {}", e);
+            Error::IoError(e.to_string())
+        })?;
 
         let filesystem = Filesystem::new(self.operator, self.config.uid, self.config.gid);
 
-        Session::new(self.config.mount_options)
+        info!("Mounting FUSE filesystem...");
+        let handle = Session::new(self.config.mount_options)
             .mount_with_unprivileged(filesystem, &self.config.mount_directory)
             .await
-            .map_err(|e| Error::MountError(e.to_string()))
+            .map_err(|e| {
+                error!("Failed to mount FUSE filesystem: {}", e);
+                Error::MountError(e.to_string())
+            })?;
+        info!("FUSE filesystem mounted successfully");
+
+        Ok(handle)
     }
 }
 
