@@ -11,12 +11,13 @@
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!    let config = OpenDALFuseConfiguration::default();
 //!    let adapter = S3OpenDALFuseAdapter::new(config)?;
-//!    let _ = adapter.start_session(MountOptions::default()).await;
+//!    let handle = adapter.start_session(MountOptions::default()).await;
+//!    handle.unmount().await?;
 //!    Ok(())
 //! }
 //! ```
 
-use std::{env, fmt};
+use std::{env, fmt, fs};
 
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
@@ -34,6 +35,10 @@ pub enum Error {
     /// Represents an error when mounting the fuse3 file system.
     #[error("failed to mount fuse3 session: {0}")]
     MountError(String),
+
+    /// Represents a generic I/O error.
+    #[error("io error: {0}")]
+    IoError(String),
 }
 
 /// Configuration for the [`S3OpenDALFuseAdapter`].
@@ -95,9 +100,17 @@ impl S3OpenDALFuseAdapter {
     }
 
     /// Starts a new fuse3 sessions, mounts it, and returns a handle to the mount.
+    ///
+    /// ## Safety
+    ///
+    /// The caller **must** remember to call [`MountHandle::unmount`] when the mount is no longer
+    /// needed to shutdown the session cleanly and safely.
     pub async fn start_session(self, mount_options: MountOptions) -> Result<MountHandle, Error> {
+        fs::create_dir_all(&self.config.mount_directory)
+            .map_err(|e| Error::IoError(e.to_string()))?;
+
         Session::new(mount_options)
-            .mount_with_unprivileged(self.filesystem, self.config.mount_directory)
+            .mount_with_unprivileged(self.filesystem, &self.config.mount_directory)
             .await
             .map_err(|e| Error::MountError(e.to_string()))
     }
@@ -105,15 +118,26 @@ impl S3OpenDALFuseAdapter {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use opendal::services::Memory;
 
     use super::*;
+
+    /// A short delay so that we don't immediately unmount the fuse3 file system.
+    const UNMOUNT_DELAY: Duration = Duration::from_millis(100);
 
     #[tokio::test]
     async fn adapter_can_start() {
         let config = OpenDALFuseConfiguration::default();
         let operator = Operator::new(Memory::default()).unwrap().finish();
         let adapter = S3OpenDALFuseAdapter::new_with_operator(config, operator);
-        let _ = adapter.start_session(MountOptions::default()).await;
+        let handle = adapter
+            .start_session(MountOptions::default())
+            .await
+            .unwrap();
+
+        tokio::time::sleep(UNMOUNT_DELAY).await;
+        handle.unmount().await.unwrap();
     }
 }

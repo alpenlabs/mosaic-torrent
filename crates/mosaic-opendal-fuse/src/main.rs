@@ -18,10 +18,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = OpenDALFuseConfiguration::default();
     let adapter = S3OpenDALFuseAdapter::new(config)?;
 
-    let handle = adapter.start_session(MountOptions::default()).await?;
+    let mut mount_handle = adapter.start_session(MountOptions::default()).await?;
+    let handle = &mut mount_handle;
+
     tokio::select! {
         _ = handle => {},
-        _ = tokio::signal::ctrl_c() => {}
+        _ = tokio::signal::ctrl_c() => {
+            mount_handle.unmount().await?;
+        }
     }
 
     Ok(())
