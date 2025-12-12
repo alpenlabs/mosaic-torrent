@@ -830,6 +830,7 @@ version = "0.0.1"
 dependencies = [
  "fuse3",
  "fuse3_opendal",
+ "libc",
  "opendal",
  "thiserror",
  "tokio",

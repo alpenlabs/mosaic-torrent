@@ -58,11 +58,13 @@ pub struct OpenDALFuseConfiguration {
 impl Default for OpenDALFuseConfiguration {
     fn default() -> Self {
         let mount_directory = env::temp_dir().join("S3OpenDALFuseAdapter");
+        let uid = unsafe { libc::getuid() };
+        let gid = unsafe { libc::getgid() };
         Self {
             mount_directory: mount_directory.to_string_lossy().to_string(),
             mount_options: MountOptions::default(),
-            uid: Default::default(),
-            gid: Default::default(),
+            uid,
+            gid,
         }
     }
 }
