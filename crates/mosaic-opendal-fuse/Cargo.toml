@@ -15,13 +15,13 @@ fuse3 = "0.8.1"
 fuse3_opendal = "0.0.19"
 opendal = { version = "0.54.1", features = ["services-s3"] }
 thiserror = "2.0.17"
-
-[dev-dependencies]
 tokio = { version = "1.48.0", features = [
   "macros",
   "rt-multi-thread",
   "signal",
 ] }
+
+[dev-dependencies]
 
 [lints]
 workspace = true
