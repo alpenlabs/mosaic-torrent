@@ -23,11 +23,13 @@
 
 use transmission_client::{
     Client, ClientError, SessionMutator, SessionStats as TransmissionSessionStats,
-    StatsDetails as TransmissionStatsDetails, Torrent as TransmissionTorrent,
+    StatsDetails as TransmissionStatsDetails, Torrent as TransmissionTorrent, TorrentPeers,
 };
 use url::Url;
 
-use mosaic_torrent_types::{BitTorrent, BitTorrentError, SessionStats, StatsDetails, Torrent};
+use mosaic_torrent_types::{
+    BitTorrent, BitTorrentError, Peers, SessionStats, StatsDetails, Torrent,
+};
 
 /// TransmissionClient is a BitTorrent client that uses Transmission RPC.
 #[allow(missing_debug_implementations)]
@@ -104,6 +106,19 @@ impl BitTorrent for TransmissionClient {
         Ok(torrents)
     }
 
+    async fn peers(&self, id: i32) -> Result<Peers, BitTorrentError> {
+        let peers_vec = self
+            .client
+            .torrents_peers(Some(vec![id]))
+            .await
+            .map_err(map_client_error)?;
+        let peers = peers_vec.first().ok_or_else(|| {
+            BitTorrentError::InvalidTorrent(format!("No peers found for torrent ID {}", id))
+        })?;
+
+        Ok(TransmissionTorrentPeersWrapper(peers.clone()).into())
+    }
+
     async fn remove(
         &self,
         ids: Vec<String>,
@@ -149,6 +164,9 @@ pub struct TransmissionStatsDetailsWrapper(TransmissionStatsDetails);
 #[allow(missing_docs)]
 #[derive(Debug)]
 pub struct TransmissionTorrentWrapper(TransmissionTorrent);
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub struct TransmissionTorrentPeersWrapper(TorrentPeers);
 
 impl From<TransmissionSessionStatsWrapper> for SessionStats {
     fn from(wrapper: TransmissionSessionStatsWrapper) -> Self {
@@ -207,6 +225,21 @@ impl From<TransmissionTorrentWrapper> for Torrent {
             status: value.status,
             torrent_file: value.torrent_file,
             total_size: value.total_size,
+        }
+    }
+}
+
+impl From<TransmissionTorrentPeersWrapper> for Peers {
+    fn from(wrapper: TransmissionTorrentPeersWrapper) -> Self {
+        let value = wrapper.0;
+        Self {
+            id: value.id,
+            peer_limit: value.peer_limit,
+            peers_connected: value.peers_connected,
+            peers_getting_from_us: value.peers_getting_from_us,
+            peers_sending_to_us: value.peers_sending_to_us,
+            max_connected_peers: value.max_connected_peers,
+            webseeds_sending_to_us: value.webseeds_sending_to_us,
         }
     }
 }

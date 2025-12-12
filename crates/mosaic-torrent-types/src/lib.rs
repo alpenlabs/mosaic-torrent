@@ -64,6 +64,8 @@ pub trait BitTorrent {
     async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError>;
     /// List all torrents.
     async fn list(&self) -> Result<Vec<Torrent>, BitTorrentError>;
+    /// Get the list of peers for a specific torrent by its ID (i32).
+    async fn peers(&self, id: i32) -> Result<Peers, BitTorrentError>;
     /// Remove torrents by their IDs (torrent hash). If `delete_local_data` is true, the local data will also be deleted.
     async fn remove(
         &self,
@@ -130,6 +132,18 @@ pub struct Torrent {
     pub status: i32,
     pub torrent_file: String,
     pub total_size: i64,
+}
+
+#[derive(Debug)]
+#[allow(missing_docs)]
+pub struct Peers {
+    pub id: i32,
+    pub peer_limit: i32,
+    pub peers_connected: i32,
+    pub peers_getting_from_us: i32,
+    pub peers_sending_to_us: i32,
+    pub max_connected_peers: i32,
+    pub webseeds_sending_to_us: i32,
 }
 
 #[cfg(test)]
