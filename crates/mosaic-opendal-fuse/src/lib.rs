@@ -47,6 +47,8 @@ pub struct OpenDALFuseConfiguration {
     /// The local directory where to mount the fuse3 file system. If not set explicitly,
     /// a temporary directory is used instead.
     pub mount_directory: String,
+    /// The options for mounting the fuse3 file system.
+    pub mount_options: MountOptions,
     /// The user identifier.
     pub uid: u32,
     /// The group identifier.
@@ -58,6 +60,7 @@ impl Default for OpenDALFuseConfiguration {
         let mount_directory = env::temp_dir().join("S3OpenDALFuseAdapter");
         Self {
             mount_directory: mount_directory.to_string_lossy().to_string(),
+            mount_options: MountOptions::default(),
             uid: Default::default(),
             gid: Default::default(),
         }
@@ -68,7 +71,7 @@ impl Default for OpenDALFuseConfiguration {
 pub struct S3OpenDALFuseAdapter {
     /// The configuration used to create the fuse3 file system.
     pub config: OpenDALFuseConfiguration,
-    filesystem: Filesystem,
+    operator: Operator,
 }
 
 impl fmt::Debug for S3OpenDALFuseAdapter {
@@ -95,8 +98,7 @@ impl S3OpenDALFuseAdapter {
     /// a custom [`Operator`] for use in testing.
     #[doc(hidden)]
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
-        let filesystem = Filesystem::new(operator, config.uid, config.gid);
-        Self { config, filesystem }
+        Self { config, operator }
     }
 
     /// Starts a new fuse3 sessions, mounts it, and returns a handle to the mount.
@@ -105,12 +107,14 @@ impl S3OpenDALFuseAdapter {
     ///
     /// The caller **must** remember to call [`MountHandle::unmount`] when the mount is no longer
     /// needed to shutdown the session cleanly and safely.
-    pub async fn start_session(self, mount_options: MountOptions) -> Result<MountHandle, Error> {
+    pub async fn start_session(self) -> Result<MountHandle, Error> {
         fs::create_dir_all(&self.config.mount_directory)
             .map_err(|e| Error::IoError(e.to_string()))?;
 
-        Session::new(mount_options)
-            .mount_with_unprivileged(self.filesystem, &self.config.mount_directory)
+        let filesystem = Filesystem::new(self.operator, self.config.uid, self.config.gid);
+
+        Session::new(self.config.mount_options)
+            .mount_with_unprivileged(filesystem, &self.config.mount_directory)
             .await
             .map_err(|e| Error::MountError(e.to_string()))
     }
@@ -132,10 +136,7 @@ mod tests {
         let config = OpenDALFuseConfiguration::default();
         let operator = Operator::new(Memory::default()).unwrap().finish();
         let adapter = S3OpenDALFuseAdapter::new_with_operator(config, operator);
-        let handle = adapter
-            .start_session(MountOptions::default())
-            .await
-            .unwrap();
+        let handle = adapter.start_session().await.unwrap();
 
         tokio::time::sleep(UNMOUNT_DELAY).await;
         handle.unmount().await.unwrap();
