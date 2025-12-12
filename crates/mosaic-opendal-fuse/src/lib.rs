@@ -22,6 +22,7 @@ use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
 use opendal::{Operator, services::S3};
 use thiserror::Error;
+use tokio as _;
 
 /// Error variants for [`S3OpenDALFuseAdapter`].
 #[derive(Error, Debug)]
