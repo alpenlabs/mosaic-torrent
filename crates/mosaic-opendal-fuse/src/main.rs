@@ -8,6 +8,7 @@
 
 use fuse3 as _;
 use fuse3_opendal as _;
+use libc as _;
 use opendal as _;
 use thiserror as _;
 
