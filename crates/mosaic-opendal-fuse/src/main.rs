@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut mount_handle = adapter.start_session().await?;
     let handle = &mut mount_handle;
 
-    // If some sockets fail to spawn, we needd to clean up the mount point.
+    // If some sockets fail to spawn, we need to clean up the mount point.
     let (_socket, signals) = match spawn_tasks(cli.socket.clone()).await {
         Ok(v) => v,
         Err(_) => {
