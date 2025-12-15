@@ -1,3 +1,6 @@
+// Allow unused dev-dependencies in lib test target
+#![cfg_attr(test, allow(unused_crate_dependencies))]
+
 //! # Torrent controller using Transmission RPC.
 //!
 //! usage:
@@ -242,10 +245,4 @@ impl From<TransmissionTorrentPeersWrapper> for Peers {
             webseeds_sending_to_us: value.webseeds_sending_to_us,
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn foo() {}
 }
