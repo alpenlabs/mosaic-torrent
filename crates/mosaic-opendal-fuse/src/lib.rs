@@ -19,6 +19,7 @@
 
 use std::{env, fmt, fs};
 
+use clap as _;
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
 use opendal::{Operator, services::S3};
