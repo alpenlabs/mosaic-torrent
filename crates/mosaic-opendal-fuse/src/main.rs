@@ -6,17 +6,18 @@
 //! cargo run --release --bin mosaic-opendal-fuse
 //! ```
 
-use std::fs;
+use std::{fs, path::Path};
 
 use clap::Parser;
-use fuse3 as _;
+use fuse3::raw::MountHandle;
 use fuse3_opendal as _;
 use libc as _;
-use opendal::{self as _, Operator, services::Memory};
+use opendal::{Operator, services::Memory};
 use thiserror as _;
 use tokio::{
     net::UnixListener,
     signal::unix::{SignalKind, signal},
+    task::JoinHandle,
 };
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
@@ -45,6 +46,45 @@ fn init_tracing() {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 }
 
+/// Spawns the socket and signals tasks and returns the handles.
+async fn spawn_tasks<S: Into<String>>(
+    socket_path: S,
+) -> Result<(JoinHandle<()>, JoinHandle<()>), Box<dyn std::error::Error>> {
+    let socket_path = socket_path.into();
+    let _ = fs::remove_file(&socket_path);
+
+    // Setup a socket that closes connections immediately to expose readiness.
+    let listener = UnixListener::bind(&socket_path)?;
+    let socket = tokio::spawn(async move {
+        info!("S3OpenDalFuseAdapter socket listening on {}", &socket_path);
+        loop {
+            let _ = listener.accept().await;
+        }
+    });
+
+    // Setup unix signals to listen to.
+    let mut sigint = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let signals = tokio::spawn(async move {
+        tokio::select! {
+            _ = sigint.recv() => {},
+            _ = sigterm.recv() => {},
+        }
+    });
+
+    Ok((socket, signals))
+}
+
+/// Attempts to unmount the FUSE filesystem and clean up the socket.
+async fn cleanup<P: AsRef<Path>>(mount_handle: MountHandle, socket_path: P) {
+    let _ = fs::remove_file(&socket_path);
+
+    match mount_handle.unmount().await {
+        Ok(_) => info!("Unmounted FUSE filesystem successfully"),
+        Err(e) => error!("Failed to unmount FUSE filesystem: {}", e),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
@@ -63,35 +103,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut mount_handle = adapter.start_session().await?;
     let handle = &mut mount_handle;
 
-    // Setup a socket that closes connections immediately to expose readiness.
-    let _ = fs::remove_file(&cli.socket);
-
-    let listener = UnixListener::bind(&cli.socket)?;
-    tokio::spawn(async move {
-        info!("S3OpenDalFuseAdapter socket listening on {}", &cli.socket);
-        loop {
-            let _ = listener.accept().await;
+    // If some sockets fail to spawn, we needd to clean up the mount point.
+    let (_socket, signals) = match spawn_tasks(cli.socket.clone()).await {
+        Ok(v) => v,
+        Err(_) => {
+            cleanup(mount_handle, cli.socket).await;
+            return Ok(());
         }
-    });
-
-    // Setup unix signals to listen to.
-    let mut sigint = signal(SignalKind::interrupt())?;
-    let mut sigterm = signal(SignalKind::terminate())?;
-    let signals = tokio::spawn(async move {
-        tokio::select! {
-            _ = sigint.recv() => {},
-            _ = sigterm.recv() => {},
-        }
-    });
+    };
 
     tokio::select! {
         _ = handle => {},
-        _ = signals => {
-            match mount_handle.unmount().await {
-                Ok(_) => info!("Unmounted FUSE filesystem successfully"),
-                Err(e) => error!("Failed to unmount FUSE filesystem: {}", e),
-            }
-        }
+        _ = signals => cleanup(mount_handle, cli.socket).await,
     }
 
     Ok(())
