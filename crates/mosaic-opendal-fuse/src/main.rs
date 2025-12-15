@@ -6,13 +6,18 @@
 //! cargo run --release --bin mosaic-opendal-fuse
 //! ```
 
+use std::fs;
+
 use clap::Parser;
 use fuse3 as _;
 use fuse3_opendal as _;
 use libc as _;
 use opendal::{self as _, Operator, services::Memory};
 use thiserror as _;
-use tokio::signal::unix::{SignalKind, signal};
+use tokio::{
+    net::UnixListener,
+    signal::unix::{SignalKind, signal},
+};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -24,6 +29,10 @@ struct Cli {
     /// The path to mount the FUSE filesystem at. If not specified, a temporary directory is used
     #[arg(short = 'p', long)]
     mount_path: Option<String>,
+
+    /// The path to listen on for socket connections
+    #[arg(short, long, default_value = "/tmp/mosaic_opendal_fuse.sock")]
+    socket: String,
 
     /// Whether to use an in-memory operator instead of an actual S3 operator, for testing
     #[arg(long, hide = true)]
@@ -53,6 +62,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut mount_handle = adapter.start_session().await?;
     let handle = &mut mount_handle;
+
+    // Setup a socket that closes connections immediately to expose readiness.
+    let _ = fs::remove_file(&cli.socket);
+
+    let listener = UnixListener::bind(&cli.socket)?;
+    tokio::spawn(async move {
+        info!("S3OpenDalFuseAdapter socket listening on {}", &cli.socket);
+        loop {
+            let _ = listener.accept().await;
+        }
+    });
 
     // Setup unix signals to listen to.
     let mut sigint = signal(SignalKind::interrupt())?;
