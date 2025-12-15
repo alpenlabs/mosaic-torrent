@@ -12,6 +12,7 @@ use fuse3_opendal as _;
 use libc as _;
 use opendal::{self as _, Operator, services::Memory};
 use thiserror as _;
+use tokio::signal::unix::{SignalKind, signal};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -53,9 +54,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut mount_handle = adapter.start_session().await?;
     let handle = &mut mount_handle;
 
+    // Setup unix signals to listen to.
+    let mut sigint = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let signals = tokio::spawn(async move {
+        tokio::select! {
+            _ = sigint.recv() => {},
+            _ = sigterm.recv() => {},
+        }
+    });
+
     tokio::select! {
         _ = handle => {},
-        _ = tokio::signal::ctrl_c() => {
+        _ = signals => {
             match mount_handle.unmount().await {
                 Ok(_) => info!("Unmounted FUSE filesystem successfully"),
                 Err(e) => error!("Failed to unmount FUSE filesystem: {}", e),

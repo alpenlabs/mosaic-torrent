@@ -109,7 +109,7 @@ impl S3OpenDALFuseAdapter {
     /// [`S3OpenDALFuseAdapter::new`] instead.
     #[doc(hidden)]
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
-        tracing::info!(
+        info!(
             mount_directory = %config.mount_directory,
             uid = config.uid,
             gid = config.gid,
