@@ -27,6 +27,8 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Install Transmission CLI
+        run: sudo apt install transmission-cli transmission-daemon
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
@@ -77,8 +79,6 @@ jobs:
   unit-success:
     name: Check that unit tests pass
     runs-on: ubuntu-latest
-    env:
-      RUST_BACKTRACE: 1
     if: always()
     needs: [test, doc]
     timeout-minutes: 60
