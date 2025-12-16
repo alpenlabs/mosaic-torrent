@@ -4,9 +4,20 @@ A FUSE (Filesystem in Userspace) adapter for the [OpenDAL](https://opendal.apach
 
 ## Usage
 
-To mount an S3 bucket, you first need to configure your credentials. You can do this by setting the necessary environment variables or using the canonical configuration files for your provider. See the Rust [OpenDAL crate](https://docs.rs/opendal/latest/opendal/services/struct.S3.html#compatible-services) for more information on supported services and how to configure them.
+To mount an S3 bucket, you first need to configure your credentials.
 
-Then, you can run the following command to mount the filesystem:
+First, copy `.env.example` to `.env`:
+
+```sh
+cp .env.example .env
+```
+
+Then, fill in the required environment variables for your provider.
+
+> [!NOTE]
+> Depending on which service provider you're using, the environment variables that are required may differ. See the Rust [OpenDAL crate](https://docs.rs/opendal/latest/opendal/services/struct.S3.html#compatible-services) for more information on supported services and how to configure them.
+
+Once configured, you can run the following command to mount the filesystem:
 
 ```sh
 cargo run --release --mount-path /path/to/mount

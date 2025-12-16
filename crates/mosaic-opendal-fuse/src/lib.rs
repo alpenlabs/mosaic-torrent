@@ -20,6 +20,7 @@
 use std::{env, fmt, fs};
 
 use clap as _;
+use dotenv as _;
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
 use opendal::{Operator, services::S3};
@@ -44,6 +45,37 @@ pub enum Error {
     IoError(String),
 }
 
+/// Configuration for the S3 service.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct S3Configuration {
+    /// The root directory for S3.
+    pub root: String,
+    /// The name of the bucket to use.
+    pub bucket: String,
+    /// The name of the region. Set to `auto` to use the default region, if supported by your provider.
+    pub region: String,
+    /// The endpoint to use.
+    pub endpoint: String,
+    /// The access key.
+    pub access_key: String,
+    /// The secret key.
+    pub secret_key: String,
+}
+
+impl S3Configuration {
+    /// Tries to read the configuration from the environment.
+    pub fn from_env() -> Self {
+        Self {
+            root: env::var("OPENDAL_S3_ROOT").unwrap_or_default(),
+            bucket: env::var("OPENDAL_S3_BUCKET").unwrap_or_default(),
+            region: env::var("OPENDAL_S3_REGION").unwrap_or_default(),
+            endpoint: env::var("OPENDAL_S3_ENDPOINT").unwrap_or_default(),
+            access_key: env::var("OPENDAL_S3_ACCESS_KEY_ID").unwrap_or_default(),
+            secret_key: env::var("OPENDAL_S3_SECRET_ACCESS_KEY").unwrap_or_default(),
+        }
+    }
+}
+
 /// Configuration for the [`S3OpenDALFuseAdapter`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {
@@ -56,6 +88,8 @@ pub struct OpenDALFuseConfiguration {
     pub uid: u32,
     /// The group identifier.
     pub gid: u32,
+    /// The config for the S3 service.
+    pub s3: S3Configuration,
 }
 
 impl Default for OpenDALFuseConfiguration {
@@ -68,6 +102,7 @@ impl Default for OpenDALFuseConfiguration {
             mount_options: MountOptions::default(),
             uid,
             gid,
+            s3: S3Configuration::default(),
         }
     }
 }
@@ -93,7 +128,12 @@ impl S3OpenDALFuseAdapter {
     /// for the OpenDAL operator is read from the environment.
     pub fn new(config: OpenDALFuseConfiguration) -> Result<Self, Error> {
         info!("Creating OpenDAL operator...");
-        let builder = S3::default();
+        let builder = S3::default()
+            .root(&config.s3.root)
+            .bucket(&config.s3.bucket)
+            .region(&config.s3.region)
+            .endpoint(&config.s3.endpoint);
+
         let operator = Operator::new(builder)
             .map_err(|e| {
                 error!("Failed to create OpenDAL operator: {}", e);
