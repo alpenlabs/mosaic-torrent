@@ -21,6 +21,8 @@ jobs:
   test:
     name: Run unit tests and generate report
     runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
     timeout-minutes: 60 # better fail-safe than the default 360 in github actions
     permissions:
       contents: read
@@ -75,6 +77,8 @@ jobs:
   unit-success:
     name: Check that unit tests pass
     runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
     if: always()
     needs: [test, doc]
     timeout-minutes: 60
