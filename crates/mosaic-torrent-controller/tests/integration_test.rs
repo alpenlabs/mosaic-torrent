@@ -113,23 +113,41 @@ fn read_pid(path: &Path) -> io::Result<i32> {
 
 #[cfg(unix)]
 #[tokio::test(flavor = "current_thread")]
-async fn integration_like_test() -> std::io::Result<()> {
+async fn integration_test() -> std::io::Result<()> {
+    use tokio::time::sleep;
+    let _ = env_logger::try_init();
     let tmp = tempfile::tempdir()?;
     let pidfile = tmp.path().join("transmission.pid");
+    let download_dir = tmp.path().join("complete");
+    let incomplete_dir = tmp.path().join("complete");
 
-    let guard = ForkingDaemonGuard::start_transmission(pidfile, &[])?;
+    let guard = ForkingDaemonGuard::start_transmission(
+        pidfile,
+        &[
+            "-w",
+            download_dir.to_str().unwrap(),
+            "--incomplete-dir",
+            incomplete_dir.to_str().unwrap(),
+        ],
+    )?;
 
     guard.wait_tcp_ready("127.0.0.1", 9091, std::time::Duration::from_secs(5))?;
 
-    println!("Transmission daemon started with PID {}", guard.pid);
-    let client = TransmissionClient::try_new(None, None, 2).await.unwrap();
-    client
-        .add("assets/test_folder.torrent", tmp.path().to_str().unwrap())
-        .await
-        .unwrap();
+    log::debug!("Transmission daemon started with PID {}", guard.pid);
+    let client = TransmissionClient::try_new(None, 2).await.unwrap();
+    let _ = client.add("assets/test_folder.torrent").await.unwrap();
     let torrents = client.list().await.unwrap();
     assert_eq!(torrents.len(), 1);
     let hash = torrents.first().unwrap().hash_string.clone();
+    loop {
+        sleep(Duration::from_secs(5)).await;
+        let binding = client.list().await.unwrap();
+        let torrent = binding.first().unwrap();
+        let _peers = client.peers(torrent.id).await.unwrap();
+        if torrent.percent_done >= 1.0 {
+            break;
+        }
+    }
     client.stop(vec![hash.clone()]).await.unwrap();
     client.remove(vec![hash.clone()], true).await.unwrap();
     let torrents = client.list().await.unwrap();

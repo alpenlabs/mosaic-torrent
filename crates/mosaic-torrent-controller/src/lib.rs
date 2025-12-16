@@ -17,7 +17,7 @@
 //!         None,
 //!     )?;
 //!     let client = TransmissionClient::try_new(None, Some("/path/to/incomplete/dir"), 1).await?;
-//!     let torrent = client.add("path/to/output/file.torrent", "/path/to/download/dir").await?;
+//!     let torrent = client.add("path/to/output/file.torrent").await?;
 //!     println!("Added torrent: {:?}", torrent);
 //!     Ok(())
 //! }
@@ -47,17 +47,15 @@ impl TransmissionClient {
     /// An incomplete directory can also be specified. If None is provided, it defaults to "/tmp/transmission/incomplete".
     pub async fn try_new(
         rpc_url: Option<&str>,
-        incomplete_dir: Option<&str>,
         max_downloads: u32,
     ) -> Result<Self, BitTorrentError> {
         let url = Url::parse(rpc_url.unwrap_or("http://localhost:9091/transmission/rpc"))
             .map_err(|e| BitTorrentError::Other(format!("Invalid RPC URL: {}", e)))?;
 
+        log::debug!("Connecting to Transmission RPC at {}", url);
         let client = Client::new(url);
-        let incomplete_dir = incomplete_dir.unwrap_or("/tmp/transmission/incomplete");
         let session_mutator = SessionMutator {
             incomplete_dir_enabled: Some(true),
-            incomplete_dir: Some(incomplete_dir.into()),
             download_queue_enabled: Some(true),
             download_queue_size: Some(max_downloads as i32),
             ..Default::default()
@@ -68,35 +66,37 @@ impl TransmissionClient {
             .await
             .map_err(map_client_error)?;
 
+        log::debug!("Connected to Transmission Daemon");
         Ok(Self { client })
     }
 }
 
 impl BitTorrent for TransmissionClient {
-    async fn add(
-        &self,
-        torrent_file: &str,
-        download_dir: &str,
-    ) -> Result<Torrent, BitTorrentError> {
+    async fn add(&self, torrent_file: &str) -> Result<Torrent, BitTorrentError> {
+        log::debug!("Adding torrent from file: {}", torrent_file);
         let torrent = self
             .client
-            .torrent_add_filename_download_dir(torrent_file, download_dir)
+            .torrent_add_filename(torrent_file)
             .await
             .map_err(map_client_error)?
             .ok_or_else(|| BitTorrentError::InvalidTorrent("No torrent returned".into()))?;
 
+        log::debug!("Added {torrent:?}");
         Ok(TransmissionTorrentWrapper(torrent).into())
     }
 
     async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError> {
+        log::debug!("Stopping torrents {ids:?}");
         self.client
             .torrent_stop(Some(ids))
             .await
             .map_err(map_client_error)?;
+        log::debug!("Stop command sent");
         Ok(())
     }
 
     async fn list(&self) -> Result<Vec<Torrent>, BitTorrentError> {
+        log::debug!("Listing active torrents");
         let torrents = self
             .client
             .torrents(None)
@@ -105,11 +105,13 @@ impl BitTorrent for TransmissionClient {
             .into_iter()
             .map(|t| TransmissionTorrentWrapper(t).into())
             .collect();
+        log::debug!("Active torrents: {torrents:?}");
 
         Ok(torrents)
     }
 
     async fn peers(&self, id: i32) -> Result<Peers, BitTorrentError> {
+        log::debug!("Getting peers for torrent ID {id}");
         let peers_vec = self
             .client
             .torrents_peers(Some(vec![id]))
@@ -118,6 +120,7 @@ impl BitTorrent for TransmissionClient {
         let peers = peers_vec.first().ok_or_else(|| {
             BitTorrentError::InvalidTorrent(format!("No peers found for torrent ID {}", id))
         })?;
+        log::debug!("Peers for torrent ID {id}: {peers:?}");
 
         Ok(TransmissionTorrentPeersWrapper(peers.clone()).into())
     }
@@ -127,19 +130,23 @@ impl BitTorrent for TransmissionClient {
         ids: Vec<String>,
         delete_local_data: bool,
     ) -> Result<(), BitTorrentError> {
+        log::debug!("Removing torrents {ids:?}, delete_local_data={delete_local_data}");
         self.client
             .torrent_remove(Some(ids), delete_local_data)
             .await
             .map_err(map_client_error)?;
+        log::debug!("Remove command sent");
         Ok(())
     }
 
     async fn stats(&self) -> Result<SessionStats, BitTorrentError> {
+        log::debug!("Getting session statistics");
         let stats = self
             .client
             .session_stats()
             .await
             .map_err(map_client_error)?;
+        log::debug!("Session statistics: {stats:?}");
 
         Ok(TransmissionSessionStatsWrapper(stats).into())
     }
