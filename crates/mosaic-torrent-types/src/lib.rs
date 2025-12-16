@@ -58,8 +58,7 @@ pub fn create_torrent_file(
 pub trait BitTorrent {
     /// Add a torrent file to Transmission. The torrents starts downloading/seeding immediately.
     /// This can be used to download a torrent, and also to seed a torrent.
-    async fn add(&self, torrent_file: &str, download_dir: &str)
-    -> Result<Torrent, BitTorrentError>;
+    async fn add(&self, torrent_file: &str) -> Result<Torrent, BitTorrentError>;
     /// Stop torrents by their IDs. The IDs should be the torrent hash.
     async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError>;
     /// List all torrents.

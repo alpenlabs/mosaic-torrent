@@ -14,6 +14,7 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
+log = "0.4"
 mosaic-torrent-types = { path = "../mosaic-torrent-types" }
 transmission-client = { git = "https://github.com/joske/transmission-client.git", branch = "master" }
 url = "2.5"
@@ -22,3 +23,4 @@ url = "2.5"
 libc = "0.2"
 tempfile = "3.23"
 tokio = { version = "1.39", features = ["full"] }
+env_logger = "0.11"
