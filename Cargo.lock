@@ -494,10 +494,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "dyn-clone"
-version = "1.0.20"
+name = "dotenv"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "either"
@@ -1260,6 +1260,7 @@ name = "mosaic-opendal-fuse"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "dotenv",
  "fuse3",
  "fuse3_opendal",
  "libc",

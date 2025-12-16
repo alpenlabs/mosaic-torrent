@@ -22,7 +22,7 @@ use tokio::{
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
-use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3OpenDALFuseAdapter};
+use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFuseAdapter};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -87,11 +87,13 @@ async fn cleanup<P: AsRef<Path>>(mount_handle: MountHandle, socket_path: P) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv::dotenv()?;
     init_tracing();
 
     let cli = Cli::parse();
     let mut config = OpenDALFuseConfiguration::default();
     cli.mount_path.map(|path| config.mount_directory = path);
+    config.s3 = S3Configuration::from_env();
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
