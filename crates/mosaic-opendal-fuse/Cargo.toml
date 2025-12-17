@@ -12,7 +12,7 @@ keywords.workspace = true
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 fuse3 = "0.8.1"
 fuse3_opendal = "0.0.19"
 libc = "0.2.178"
