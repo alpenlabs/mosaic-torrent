@@ -87,7 +87,7 @@ async fn cleanup<P: AsRef<Path>>(mount_handle: MountHandle, socket_path: P) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::dotenv()?;
+    let _ = dotenvy::dotenv();
     init_tracing();
 
     let cli = Cli::parse();
