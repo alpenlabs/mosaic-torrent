@@ -3,7 +3,7 @@
 //! ## Usage
 //!
 //! ```sh,ignore
-//! cargo run --release --bin mosaic-opendal-fuse
+//! cargo run --release mosaic-opendal-fuse --mount-path /path/to/mount
 //! ```
 
 use std::{fs, path::Path};
