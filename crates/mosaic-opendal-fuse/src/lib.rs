@@ -132,7 +132,9 @@ impl S3OpenDALFuseAdapter {
             .root(&config.s3.root)
             .bucket(&config.s3.bucket)
             .region(&config.s3.region)
-            .endpoint(&config.s3.endpoint);
+            .endpoint(&config.s3.endpoint)
+            .access_key_id(&config.s3.access_key)
+            .secret_access_key(&config.s3.secret_key);
 
         let operator = Operator::new(builder)
             .map_err(|e| {
