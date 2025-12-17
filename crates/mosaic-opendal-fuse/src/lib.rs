@@ -20,7 +20,7 @@
 use std::{env, fmt, fs};
 
 use clap as _;
-use dotenv as _;
+use dotenvy as _;
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
 use opendal::{Operator, services::S3};
@@ -132,7 +132,9 @@ impl S3OpenDALFuseAdapter {
             .root(&config.s3.root)
             .bucket(&config.s3.bucket)
             .region(&config.s3.region)
-            .endpoint(&config.s3.endpoint);
+            .endpoint(&config.s3.endpoint)
+            .access_key_id(&config.s3.access_key)
+            .secret_access_key(&config.s3.secret_key);
 
         let operator = Operator::new(builder)
             .map_err(|e| {
