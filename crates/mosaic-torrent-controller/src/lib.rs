@@ -16,7 +16,7 @@
 //!         "path/to/output/file.torrent",
 //!         None,
 //!     )?;
-//!     let client = TransmissionClient::try_new(None, Some("/path/to/incomplete/dir"), 1).await?;
+//!     let client = TransmissionClient::try_new(None, 1).await?;
 //!     let torrent = client.add("path/to/output/file.torrent").await?;
 //!     println!("Added torrent: {:?}", torrent);
 //!     Ok(())
