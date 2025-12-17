@@ -91,9 +91,9 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 [[package]]
 name = "bencode"
 version = "1.0.0-alpha.1"
-source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#344f1c21279233498e2968d7cbe6ea673892beb1"
+source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#6eb0bd44948efea0e5a1f24fdb4139d683329504"
 dependencies = [
- "thiserror 1.0.69",
+ "thiserror",
 ]
 
 [[package]]
@@ -899,11 +899,11 @@ checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 [[package]]
 name = "metainfo"
 version = "1.0.0-alpha.1"
-source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#344f1c21279233498e2968d7cbe6ea673892beb1"
+source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#6eb0bd44948efea0e5a1f24fdb4139d683329504"
 dependencies = [
  "bencode",
  "crossbeam",
- "thiserror 1.0.69",
+ "thiserror",
  "util",
  "walkdir",
 ]
@@ -948,7 +948,7 @@ name = "mosaic-torrent-types"
 version = "0.0.1"
 dependencies = [
  "metainfo",
- "thiserror 2.0.17",
+ "thiserror",
 ]
 
 [[package]]
@@ -1713,31 +1713,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8"
 dependencies = [
- "thiserror-impl 2.0.17",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -1929,7 +1909,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_with",
- "thiserror 2.0.17",
+ "thiserror",
  "url",
 ]
 
@@ -1984,7 +1964,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 [[package]]
 name = "util"
 version = "1.0.0-alpha.1"
-source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#344f1c21279233498e2968d7cbe6ea673892beb1"
+source = "git+https://github.com/joske/bip-rs.git?branch=fix%2Frand#6eb0bd44948efea0e5a1f24fdb4139d683329504"
 dependencies = [
  "chrono",
  "num",
