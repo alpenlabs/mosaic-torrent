@@ -56,6 +56,10 @@ pub struct S3Configuration {
     pub region: String,
     /// The endpoint to use.
     pub endpoint: String,
+    /// The access key.
+    pub access_key: String,
+    /// The secret key.
+    pub secret_key: String,
 }
 
 impl S3Configuration {
@@ -66,6 +70,8 @@ impl S3Configuration {
             bucket: env::var("OPENDAL_S3_BUCKET").unwrap_or_default(),
             region: env::var("OPENDAL_S3_REGION").unwrap_or_default(),
             endpoint: env::var("OPENDAL_S3_ENDPOINT").unwrap_or_default(),
+            access_key: env::var("OPENDAL_S3_ACCESS_KEY_ID").unwrap_or_default(),
+            secret_key: env::var("OPENDAL_S3_SECRET_ACCESS_KEY").unwrap_or_default(),
         }
     }
 }

@@ -20,7 +20,7 @@ Then, fill in the required environment variables for your provider.
 Once configured, you can run the following command to mount the filesystem:
 
 ```sh
-cargo run --release --mount-path /path/to/mount
+cargo run --release -- --mount-path /path/to/mount
 ```
 
 This will mount the S3 bucket at `/path/to/mount`.
@@ -42,4 +42,14 @@ To run the tests:
 
 ```sh
 cargo test
+```
+
+### Tracing
+
+The project uses the [tracing](https://crates.io/crates/tracing) crate for logging. To enable logging, set the `RUST_LOG` environment variable to the desired log level. By default, the log level is set to `info`.
+
+For example, to enable debug logging:
+
+```sh
+RUST_LOG=debug cargo run --release -- --mount-path /path/to/mount
 ```
