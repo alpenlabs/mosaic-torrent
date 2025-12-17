@@ -2,7 +2,7 @@
 //!
 //! This crate defines common types and traits for BitTorrent clients used in the Mosaic project.
 
-use bip_metainfo::{MetainfoBuilder, PieceLength};
+use metainfo::{MetainfoBuilder, PieceLength};
 use thiserror::Error;
 
 /// Error type for BitTorrent operations.
