@@ -77,6 +77,26 @@ impl S3Configuration {
     }
 }
 
+/// The strategy to use for resolving which unix IDs to mount with.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum IDStrategy {
+    /// Inherits the ID from the parent process.
+    #[default]
+    Inherit,
+    /// Uses a custom user-provided ID.
+    Custom(u32),
+}
+
+impl fmt::Display for IDStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            IDStrategy::Inherit => "inherit".to_string(),
+            IDStrategy::Custom(id) => format!("custom: {id}"),
+        };
+        write!(f, "{s}")
+    }
+}
+
 /// Configuration for the [`S3OpenDALFuseAdapter`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {
@@ -86,9 +106,9 @@ pub struct OpenDALFuseConfiguration {
     /// The options for mounting the fuse3 file system.
     pub mount_options: MountOptions,
     /// The user identifier.
-    pub uid: u32,
+    pub uid: IDStrategy,
     /// The group identifier.
-    pub gid: u32,
+    pub gid: IDStrategy,
     /// The config for the S3 service.
     pub s3: S3Configuration,
 }
@@ -96,13 +116,11 @@ pub struct OpenDALFuseConfiguration {
 impl Default for OpenDALFuseConfiguration {
     fn default() -> Self {
         let mount_directory = env::temp_dir().join("S3OpenDALFuseAdapter");
-        let uid = Uid::current().as_raw();
-        let gid = Gid::current().as_raw();
         Self {
             mount_directory: mount_directory.to_string_lossy().to_string(),
             mount_options: MountOptions::default(),
-            uid,
-            gid,
+            uid: IDStrategy::default(),
+            gid: IDStrategy::default(),
             s3: S3Configuration::default(),
         }
     }
@@ -154,8 +172,8 @@ impl S3OpenDALFuseAdapter {
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
         info!(
             mount_directory = %config.mount_directory,
-            uid = config.uid,
-            gid = config.gid,
+            uid = %config.uid,
+            gid = %config.gid,
             "Creating S3OpenDALFuseAdapter with configuration"
         );
         Self { config, operator }
@@ -178,7 +196,17 @@ impl S3OpenDALFuseAdapter {
             Error::Io(e.to_string())
         })?;
 
-        let filesystem = Filesystem::new(self.operator, self.config.uid, self.config.gid);
+        // Resolve unix IDs based on the configured strategy.
+        let uid = match self.config.uid {
+            IDStrategy::Inherit => Uid::current().as_raw(),
+            IDStrategy::Custom(uid) => uid,
+        };
+        let gid = match self.config.gid {
+            IDStrategy::Inherit => Gid::current().as_raw(),
+            IDStrategy::Custom(gid) => gid,
+        };
+
+        let filesystem = Filesystem::new(self.operator, uid, gid);
 
         info!("Mounting FUSE filesystem...");
         let handle = Session::new(self.config.mount_options)
