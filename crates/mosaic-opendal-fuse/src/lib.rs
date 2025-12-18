@@ -34,15 +34,15 @@ use tracing_subscriber as _;
 pub enum Error {
     /// Represents an error when creating the OpenDAL operator.
     #[error("failed to create OpenDAL operator: {0}")]
-    OpenDALOperatorInitError(String),
+    OpenDALOperatorInit(String),
 
     /// Represents an error when mounting the fuse3 file system.
     #[error("failed to mount fuse3 session: {0}")]
-    MountError(String),
+    Mount(String),
 
     /// Represents a generic I/O error.
-    #[error("io error: {0}")]
-    IoError(String),
+    #[error("io: {0}")]
+    Io(String),
 }
 
 /// Configuration for the S3 service.
@@ -139,7 +139,7 @@ impl S3OpenDALFuseAdapter {
         let operator = Operator::new(builder)
             .map_err(|e| {
                 error!("Failed to create OpenDAL operator: {}", e);
-                Error::OpenDALOperatorInitError(e.to_string())
+                Error::OpenDALOperatorInit(e.to_string())
             })?
             .finish();
         info!("OpenDAL operator created successfully");
@@ -174,7 +174,7 @@ impl S3OpenDALFuseAdapter {
         );
         fs::create_dir_all(&self.config.mount_directory).map_err(|e| {
             error!("Failed to create mount directory: {}", e);
-            Error::IoError(e.to_string())
+            Error::Io(e.to_string())
         })?;
 
         let filesystem = Filesystem::new(self.operator, self.config.uid, self.config.gid);
@@ -185,7 +185,7 @@ impl S3OpenDALFuseAdapter {
             .await
             .map_err(|e| {
                 error!("Failed to mount FUSE filesystem: {}", e);
-                Error::MountError(e.to_string())
+                Error::Mount(e.to_string())
             })?;
         info!("FUSE filesystem mounted successfully");
 
