@@ -20,7 +20,9 @@ transmission-client = { git = "https://github.com/joske/transmission-client.git"
 url = "2.5"
 
 [dev-dependencies]
+async-trait = "0.1"
 libc = "0.2"
+mockall = "0.14"
 tempfile = "3.23"
-tokio = { version = "1.39", features = ["full"] }
+tokio = { version = "1.48", features = ["full"] }
 env_logger = "0.11"
