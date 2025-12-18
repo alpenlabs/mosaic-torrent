@@ -23,6 +23,7 @@ use clap as _;
 use dotenvy as _;
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
+use nix::unistd::{Gid, Uid};
 use opendal::{Operator, services::S3};
 use thiserror::Error;
 use tokio as _;
@@ -95,8 +96,8 @@ pub struct OpenDALFuseConfiguration {
 impl Default for OpenDALFuseConfiguration {
     fn default() -> Self {
         let mount_directory = env::temp_dir().join("S3OpenDALFuseAdapter");
-        let uid = unsafe { libc::getuid() };
-        let gid = unsafe { libc::getgid() };
+        let uid = Uid::current().as_raw();
+        let gid = Gid::current().as_raw();
         Self {
             mount_directory: mount_directory.to_string_lossy().to_string(),
             mount_options: MountOptions::default(),
