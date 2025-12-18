@@ -27,9 +27,9 @@ use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFu
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// The path to mount the FUSE filesystem at. If not specified, a temporary directory is used
+    /// The path to mount the FUSE filesystem at.
     #[arg(short = 'p', long)]
-    mount_path: Option<String>,
+    mount_path: String,
 
     /// The path to listen on for socket connections
     #[arg(short, long, default_value = "/tmp/mosaic_opendal_fuse.sock")]
@@ -105,15 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
-    let mut config = OpenDALFuseConfiguration {
+    let config = OpenDALFuseConfiguration {
         s3: S3Configuration::from_env(),
         ..Default::default()
     };
-
-    // Override the default mount directory if specified.
-    if let Some(path) = cli.mount_path {
-        config.mount_directory = path;
-    }
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
@@ -122,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         S3OpenDALFuseAdapter::new(config)?
     };
 
-    let mut mount_handle = adapter.start_session().await?;
+    let mut mount_handle = adapter.start_session(cli.mount_path).await?;
     let handle = &mut mount_handle;
 
     // If some sockets fail to spawn, we need to clean up the mount point.
