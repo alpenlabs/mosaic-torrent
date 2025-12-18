@@ -98,11 +98,8 @@ impl fmt::Display for IDStrategy {
 }
 
 /// Configuration for the [`S3OpenDALFuseAdapter`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {
-    /// The local directory where to mount the fuse3 file system. If not set explicitly,
-    /// a temporary directory is used instead.
-    pub mount_directory: String,
     /// The options for mounting the fuse3 file system.
     pub mount_options: MountOptions,
     /// The user identifier.
@@ -111,19 +108,6 @@ pub struct OpenDALFuseConfiguration {
     pub gid: IDStrategy,
     /// The config for the S3 service.
     pub s3: S3Configuration,
-}
-
-impl Default for OpenDALFuseConfiguration {
-    fn default() -> Self {
-        let mount_directory = env::temp_dir().join("S3OpenDALFuseAdapter");
-        Self {
-            mount_directory: mount_directory.to_string_lossy().to_string(),
-            mount_options: MountOptions::default(),
-            uid: IDStrategy::default(),
-            gid: IDStrategy::default(),
-            s3: S3Configuration::default(),
-        }
-    }
 }
 
 /// A fuse3 file system adapter for the OpenDAL operator.
@@ -171,7 +155,6 @@ impl S3OpenDALFuseAdapter {
     #[doc(hidden)]
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
         info!(
-            mount_directory = %config.mount_directory,
             uid = %config.uid,
             gid = %config.gid,
             "Creating S3OpenDALFuseAdapter with configuration"
@@ -185,13 +168,14 @@ impl S3OpenDALFuseAdapter {
     ///
     /// The caller **must** remember to call [`MountHandle::unmount`] when the mount is no longer
     /// needed to shutdown the session cleanly and safely.
-    #[instrument(skip(self), fields(mount_dir = %self.config.mount_directory))]
-    pub async fn start_session(self) -> Result<MountHandle, Error> {
-        info!(
-            "Creating mount directory at {}",
-            self.config.mount_directory
-        );
-        fs::create_dir_all(&self.config.mount_directory).map_err(|e| {
+    #[instrument(skip(self), fields(mount_dir = %mount_directory))]
+    pub async fn start_session<S: Into<String> + fmt::Display + fmt::Debug>(
+        self,
+        mount_directory: S,
+    ) -> Result<MountHandle, Error> {
+        let mount_directory = mount_directory.into();
+        info!("Creating mount directory at {}", mount_directory);
+        fs::create_dir_all(&mount_directory).map_err(|e| {
             error!("Failed to create mount directory: {}", e);
             Error::Io(e.to_string())
         })?;
@@ -210,7 +194,7 @@ impl S3OpenDALFuseAdapter {
 
         info!("Mounting FUSE filesystem...");
         let handle = Session::new(self.config.mount_options)
-            .mount_with_unprivileged(filesystem, &self.config.mount_directory)
+            .mount_with_unprivileged(filesystem, &mount_directory)
             .await
             .map_err(|e| {
                 error!("Failed to mount FUSE filesystem: {}", e);
@@ -232,13 +216,15 @@ mod tests {
 
     /// A short delay so that we don't immediately unmount the fuse3 file system.
     const UNMOUNT_DELAY: Duration = Duration::from_millis(100);
+    /// The directory to mount to when running tests.
+    const TEST_MOUNT_DIR: &str = "/tmp/mosaic-opendal-fuse";
 
     #[tokio::test]
     async fn adapter_can_start() {
         let config = OpenDALFuseConfiguration::default();
         let operator = Operator::new(Memory::default()).unwrap().finish();
         let adapter = S3OpenDALFuseAdapter::new_with_operator(config, operator);
-        let handle = adapter.start_session().await.unwrap();
+        let handle = adapter.start_session(TEST_MOUNT_DIR).await.unwrap();
 
         tokio::time::sleep(UNMOUNT_DELAY).await;
         handle.unmount().await.unwrap();
