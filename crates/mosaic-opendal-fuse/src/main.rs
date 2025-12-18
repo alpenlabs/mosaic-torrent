@@ -50,6 +50,15 @@ fn init_tracing() {
 async fn spawn_tasks<S: Into<String>>(
     socket_path: S,
 ) -> Result<(JoinHandle<()>, JoinHandle<()>), Box<dyn std::error::Error>> {
+    let socket = spawn_socket_listener(socket_path)?;
+    let signals = spawn_signal_listener()?;
+    Ok((socket, signals))
+}
+
+/// Spawns and returns the socket listener task.
+fn spawn_socket_listener<S: Into<String>>(
+    socket_path: S,
+) -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     let socket_path = socket_path.into();
     let _ = fs::remove_file(&socket_path);
 
@@ -62,6 +71,11 @@ async fn spawn_tasks<S: Into<String>>(
         }
     });
 
+    Ok(socket)
+}
+
+/// Spawns and returns the signals listener task.
+fn spawn_signal_listener() -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     // Setup unix signals to listen to.
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
@@ -72,7 +86,7 @@ async fn spawn_tasks<S: Into<String>>(
         }
     });
 
-    Ok((socket, signals))
+    Ok(signals)
 }
 
 /// Attempts to unmount the FUSE filesystem and clean up the socket.
