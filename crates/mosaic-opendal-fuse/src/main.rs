@@ -11,7 +11,7 @@ use std::{fs, path::Path};
 use clap::Parser;
 use fuse3::raw::MountHandle;
 use fuse3_opendal as _;
-use libc as _;
+use nix as _;
 use opendal::{Operator, services::Memory};
 use thiserror as _;
 use tokio::{
