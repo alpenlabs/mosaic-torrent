@@ -14,7 +14,7 @@ keywords.workspace = true
 workspace = true
 
 [dependencies]
-bip_metainfo = "0.12"
+metainfo = { git = "https://github.com/joske/bip-rs.git", branch = "fix/rand", package = "metainfo" }
 thiserror = "2.0"
 
 [dev-dependencies]

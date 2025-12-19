@@ -2,7 +2,7 @@
 //!
 //! This crate defines common types and traits for BitTorrent clients used in the Mosaic project.
 
-use bip_metainfo::{MetainfoBuilder, PieceLength};
+use metainfo::{MetainfoBuilder, PieceLength};
 use thiserror::Error;
 
 /// Error type for BitTorrent operations.
@@ -53,13 +53,12 @@ pub fn create_torrent_file(
     Ok(())
 }
 
-#[allow(async_fn_in_trait)]
 /// BitTorrent trait defines the common interface for BitTorrent clients.
+#[allow(async_fn_in_trait)]
 pub trait BitTorrent {
     /// Add a torrent file to Transmission. The torrents starts downloading/seeding immediately.
     /// This can be used to download a torrent, and also to seed a torrent.
-    async fn add(&self, torrent_file: &str, download_dir: &str)
-    -> Result<Torrent, BitTorrentError>;
+    async fn add(&self, torrent_file: &str) -> Result<Torrent, BitTorrentError>;
     /// Stop torrents by their IDs. The IDs should be the torrent hash.
     async fn stop(&self, ids: Vec<String>) -> Result<(), BitTorrentError>;
     /// List all torrents.
@@ -76,73 +75,114 @@ pub trait BitTorrent {
     async fn stats(&self) -> Result<SessionStats, BitTorrentError>;
 }
 
-// The below are copied from Transmission RPC types, as this will be the initial implementation.
-// Other implementations are expected to be similar.
+// The below are mostly copied from Transmission RPC types, as this will be the initial implementation.
+// Other implementations are expected to have similar fields.
 
+/// Session statistics.
 #[derive(Debug)]
 #[allow(missing_docs)] // rationale: these are the same fields as in Transmission RPC
-/// Session statistics.
 pub struct SessionStats {
     pub active_torrent_count: i32,
+
     pub cumulative_stats: StatsDetails,
+
     pub current_stats: StatsDetails,
+
     pub download_speed: i32,
+
     pub paused_torrent_count: i32,
+
     pub torrent_count: i32,
+
     pub upload_speed: i32,
 }
 
+/// Detailed statistics.
 #[derive(Debug)]
 #[allow(missing_docs)]
-/// Detailed statistics.
 pub struct StatsDetails {
     pub downloaded_bytes: i64,
+
     pub files_added: i64,
+
     pub seconds_active: i64,
+
     pub session_count: i64,
+
     pub uploaded_bytes: i64,
 }
 
+/// Torrent information.
 #[derive(Debug)]
 #[allow(missing_docs)]
-/// Torrent information.
 pub struct Torrent {
     pub id: i32,
+
     pub activity_date: i32,
+
     pub added_date: i32,
+
     pub bandwidth_priority: i32,
+
     pub comment: String,
+
     pub creator: String,
+
     pub date_created: i32,
+
     pub download_dir: String,
+
     pub download_limit: i32,
+
     pub download_limited: bool,
+
     pub eta: i64,
+
     pub eta_idle: i64,
+
     pub hash_string: String,
+
     pub have_unchecked: i64,
+
     pub have_valid: i64,
+
     pub is_finished: bool,
+
     pub is_private: bool,
+
     pub is_stalled: bool,
+
     pub name: String,
+
     pub percent_done: f32,
+
     pub queue_position: i32,
+
     pub start_date: i32,
+
     pub status: i32,
+
     pub torrent_file: String,
+
     pub total_size: i64,
 }
 
+/// Torrent peers information.
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Peers {
     pub id: i32,
+
     pub peer_limit: i32,
+
     pub peers_connected: i32,
+
     pub peers_getting_from_us: i32,
+
     pub peers_sending_to_us: i32,
+
     pub max_connected_peers: i32,
+
     pub webseeds_sending_to_us: i32,
 }
 

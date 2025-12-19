@@ -21,10 +21,14 @@ jobs:
   test:
     name: Run unit tests and generate report
     runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
     timeout-minutes: 60 # better fail-safe than the default 360 in github actions
     permissions:
       contents: read
     steps:
+      - name: Install Transmission CLI
+        run: sudo apt install transmission-cli transmission-daemon
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
