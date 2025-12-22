@@ -105,10 +105,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
-    let config = OpenDALFuseConfiguration {
+    let mut config = OpenDALFuseConfiguration {
         s3: S3Configuration::from_env(),
         ..Default::default()
     };
+
+    // Allow other users to access the mounted filesystem.
+    // Its needed to also set "user_allow_other" in /etc/fuse.conf for this to work.
+    config.mount_options.allow_other(true);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
