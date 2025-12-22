@@ -4,16 +4,15 @@
 //! transmission client, enabling mocking in tests.
 
 use transmission_client::{
-    Client, ClientError, SessionMutator, SessionStats as TransmissionSessionStats,
-    Torrent as TransmissionTorrent, TorrentPeers,
+    Client, ClientError, SessionStats as TransmissionSessionStats, Torrent as TransmissionTorrent,
+    TorrentPeers,
 };
 
 /// Internal trait that abstracts the transmission client operations.
 /// This allows for mocking in tests.
 #[cfg_attr(test, mockall::automock)]
-#[allow(async_fn_in_trait, dead_code)]
+#[allow(async_fn_in_trait)]
 pub(crate) trait TransmissionOps {
-    async fn session_set(&self, mutator: SessionMutator) -> Result<(), ClientError>;
     async fn torrent_add_filename(
         &self,
         filename: &str,
@@ -24,7 +23,7 @@ pub(crate) trait TransmissionOps {
         ids: Option<Vec<i32>>,
     ) -> Result<Vec<TransmissionTorrent>, ClientError>;
     async fn torrents_peers(&self, ids: Option<Vec<i32>>)
-        -> Result<Vec<TorrentPeers>, ClientError>;
+    -> Result<Vec<TorrentPeers>, ClientError>;
     async fn torrent_remove(
         &self,
         ids: Option<Vec<String>>,
@@ -34,10 +33,6 @@ pub(crate) trait TransmissionOps {
 }
 
 impl TransmissionOps for Client {
-    async fn session_set(&self, mutator: SessionMutator) -> Result<(), ClientError> {
-        Client::session_set(self, mutator).await
-    }
-
     async fn torrent_add_filename(
         &self,
         filename: &str,
