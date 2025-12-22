@@ -3,7 +3,7 @@
 use mosaic_torrent_types::{BitTorrent, BitTorrentError};
 use transmission_client::ClientError;
 
-use super::{map_client_error, TransmissionClient};
+use super::{TransmissionClient, map_client_error};
 use crate::ops::MockTransmissionOps;
 use crate::testutil::{make_test_peers, make_test_stats, make_test_torrent};
 
