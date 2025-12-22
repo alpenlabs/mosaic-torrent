@@ -3,7 +3,7 @@
 
 //! # Torrent controller using Transmission RPC.
 //!
-//! This crate provides a [`TransmissionClient`] that implements the [`BitTorrent`] trait
+//! This crate provides a [`TransmissionClient`] that implements the [`mosaic_torrent_types::BitTorrent`] trait
 //! from `mosaic_torrent_types`, allowing you to manage torrents through the Transmission daemon.
 //!
 //! ## Usage
