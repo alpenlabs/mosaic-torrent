@@ -17,6 +17,9 @@ Then, fill in the required environment variables for your provider.
 > [!NOTE]
 > Depending on which service provider you're using, the environment variables that are required may differ. See the Rust [OpenDAL crate](https://docs.rs/opendal/latest/opendal/services/struct.S3.html#compatible-services) for more information on supported services and how to configure them.
 
+> [!NOTE]
+> If you are thinking on sharing the FUSE mount point with docker containers, you may need to tune host `/etc/fuse.conf` adding the `user_allow_other` option.
+
 Once configured, you can run the following command to mount the filesystem:
 
 ```sh
