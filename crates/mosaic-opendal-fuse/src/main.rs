@@ -11,7 +11,7 @@ use std::{fs, path::Path};
 use clap::Parser;
 use fuse3::raw::MountHandle;
 use fuse3_opendal as _;
-use libc as _;
+use nix as _;
 use opendal::{Operator, services::Memory};
 use thiserror as _;
 use tokio::{
@@ -27,9 +27,9 @@ use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFu
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// The path to mount the FUSE filesystem at. If not specified, a temporary directory is used
+    /// The path to mount the FUSE filesystem at.
     #[arg(short = 'p', long)]
-    mount_path: Option<String>,
+    mount_path: String,
 
     /// The path to listen on for socket connections
     #[arg(short, long, default_value = "/tmp/mosaic_opendal_fuse.sock")]
@@ -50,6 +50,15 @@ fn init_tracing() {
 async fn spawn_tasks<S: Into<String>>(
     socket_path: S,
 ) -> Result<(JoinHandle<()>, JoinHandle<()>), Box<dyn std::error::Error>> {
+    let socket = spawn_socket_listener(socket_path)?;
+    let signals = spawn_signal_listener()?;
+    Ok((socket, signals))
+}
+
+/// Spawns and returns the socket listener task.
+fn spawn_socket_listener<S: Into<String>>(
+    socket_path: S,
+) -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     let socket_path = socket_path.into();
     let _ = fs::remove_file(&socket_path);
 
@@ -62,6 +71,11 @@ async fn spawn_tasks<S: Into<String>>(
         }
     });
 
+    Ok(socket)
+}
+
+/// Spawns and returns the signals listener task.
+fn spawn_signal_listener() -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     // Setup unix signals to listen to.
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
@@ -72,7 +86,7 @@ async fn spawn_tasks<S: Into<String>>(
         }
     });
 
-    Ok((socket, signals))
+    Ok(signals)
 }
 
 /// Attempts to unmount the FUSE filesystem and clean up the socket.
@@ -91,15 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
-    let mut config = OpenDALFuseConfiguration {
+    let config = OpenDALFuseConfiguration {
         s3: S3Configuration::from_env(),
         ..Default::default()
     };
-
-    // Override the default mount directory if specified.
-    if let Some(path) = cli.mount_path {
-        config.mount_directory = path;
-    }
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
@@ -108,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         S3OpenDALFuseAdapter::new(config)?
     };
 
-    let mut mount_handle = adapter.start_session().await?;
+    let mut mount_handle = adapter.start_session(cli.mount_path).await?;
     let handle = &mut mount_handle;
 
     // If some sockets fail to spawn, we need to clean up the mount point.
