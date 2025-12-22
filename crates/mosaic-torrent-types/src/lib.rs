@@ -2,7 +2,7 @@
 //!
 //! This crate defines common types and traits for BitTorrent clients used in the Mosaic project.
 
-use metainfo::{MetainfoBuilder, PieceLength};
+use lava_torrent::torrent::v1::TorrentBuilder;
 use thiserror::Error;
 
 /// Error type for BitTorrent operations.
@@ -35,22 +35,11 @@ pub enum BitTorrentError {
 
 /// Create a torrent file from a folder.
 /// This is not BitTorrent client specific, so it is not part of the BitTorrent trait.
-pub fn create_torrent_file(
-    folder: &str,
-    output_file: &str,
-    tracker_url: Option<&str>,
-) -> Result<(), BitTorrentError> {
-    let builder = MetainfoBuilder::new()
-        .set_piece_length(PieceLength::OptBalanced)
-        .set_main_tracker(tracker_url);
-
-    let bytes = builder
-        .build(1, folder, |_| {})
-        .map_err(|e| BitTorrentError::InvalidTorrent(e.to_string()))?;
-
-    std::fs::write(output_file, bytes).map_err(|e| BitTorrentError::FileSystem(e.to_string()))?;
-
-    Ok(())
+pub fn create_torrent_file(folder: &str, output_file: &str) -> Result<(), BitTorrentError> {
+    let torrent = TorrentBuilder::new(folder, 1048576).build().unwrap();
+    torrent.write_into_file(output_file).map_err(|e| {
+        BitTorrentError::InvalidTorrent(format!("failed to write torrent file: {}", e))
+    })
 }
 
 /// BitTorrent trait defines the common interface for BitTorrent clients.
@@ -199,7 +188,6 @@ mod tests {
         super::create_torrent_file(
             "target/test_data/create_torrent",
             "target/test_data/create_torrent/test.torrent",
-            None,
         )?;
         assert!(std::path::Path::new("target/test_data/create_torrent/test.torrent").exists());
         std::fs::remove_dir_all("target/test_data/create_torrent").unwrap();
