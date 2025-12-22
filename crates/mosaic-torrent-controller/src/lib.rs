@@ -30,8 +30,7 @@ mod client;
 mod conversions;
 mod ops;
 
+#[cfg(test)]
+mod testutil;
+
 pub use client::TransmissionClient;
-pub use conversions::{
-    TransmissionSessionStatsWrapper, TransmissionStatsDetailsWrapper,
-    TransmissionTorrentPeersWrapper, TransmissionTorrentWrapper,
-};
