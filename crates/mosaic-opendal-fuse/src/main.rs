@@ -105,10 +105,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
-    let config = OpenDALFuseConfiguration {
+    let mut config = OpenDALFuseConfiguration {
         s3: S3Configuration::from_env(),
         ..Default::default()
     };
+
+    config.mount_options.allow_other(true);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
