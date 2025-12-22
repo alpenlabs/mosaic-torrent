@@ -36,6 +36,7 @@ rustdoc.all = "warn"
 clippy.too_long_first_doc_paragraph = "warn"
 
 [workspace.dependencies]
+tracing = "0.1"
 
 [profile.release]
 opt-level = "z"   # Optimized for size, use 3 for speed

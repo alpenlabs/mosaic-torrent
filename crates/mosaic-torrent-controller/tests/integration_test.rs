@@ -111,11 +111,25 @@ fn read_pid(path: &Path) -> io::Result<i32> {
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
+fn init_test_tracing() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let subscriber = tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_env_filter("debug")
+            .finish();
+        let _ = tracing::subscriber::set_global_default(subscriber);
+    });
+}
+
 #[cfg(unix)]
 #[tokio::test(flavor = "current_thread")]
 async fn integration_test() -> std::io::Result<()> {
     use tokio::time::sleep;
-    let _ = env_logger::try_init();
+    use tracing::debug;
+
+    init_test_tracing();
+
     let tmp = tempfile::tempdir()?;
     let pidfile = tmp.path().join("transmission.pid");
     let download_dir = tmp.path().join("complete");
@@ -133,7 +147,7 @@ async fn integration_test() -> std::io::Result<()> {
 
     guard.wait_tcp_ready("127.0.0.1", 9091, std::time::Duration::from_secs(5))?;
 
-    log::debug!("Transmission daemon started with PID {}", guard.pid);
+    debug!("Transmission daemon started with PID {}", guard.pid);
     let client = TransmissionClient::try_new(None, 2).await.unwrap();
     let _ = client.add("assets/test_folder.torrent").await.unwrap();
     let torrents = client.list().await.unwrap();
