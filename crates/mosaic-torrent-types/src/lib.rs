@@ -2,7 +2,7 @@
 //!
 //! This crate defines common types and traits for BitTorrent clients used in the Mosaic project.
 
-use metainfo::{MetainfoBuilder, PieceLength};
+use lava_torrent::torrent::v1::TorrentBuilder;
 use thiserror::Error;
 
 /// Error type for BitTorrent operations.
@@ -38,17 +38,15 @@ pub enum BitTorrentError {
 pub fn create_torrent_file(
     folder: &str,
     output_file: &str,
-    tracker_url: Option<&str>,
+    tracker_url: Option<String>,
 ) -> Result<(), BitTorrentError> {
-    let builder = MetainfoBuilder::new()
-        .set_piece_length(PieceLength::OptBalanced)
-        .set_main_tracker(tracker_url);
-
-    let bytes = builder
-        .build(1, folder, |_| {})
-        .map_err(|e| BitTorrentError::InvalidTorrent(e.to_string()))?;
-
-    std::fs::write(output_file, bytes).map_err(|e| BitTorrentError::FileSystem(e.to_string()))?;
+    let torrent = TorrentBuilder::new(folder, 1048576)
+        .set_announce(tracker_url)
+        .build()
+        .unwrap();
+    torrent.write_into_file(output_file).map_err(|e| {
+        BitTorrentError::InvalidTorrent(format!("failed to write torrent file: {}", e))
+    })?;
 
     Ok(())
 }
@@ -199,7 +197,7 @@ mod tests {
         super::create_torrent_file(
             "target/test_data/create_torrent",
             "target/test_data/create_torrent/test.torrent",
-            None,
+            Some("udp://tracker.opentrackr.org:1337/announce".to_string()),
         )?;
         assert!(std::path::Path::new("target/test_data/create_torrent/test.torrent").exists());
         std::fs::remove_dir_all("target/test_data/create_torrent").unwrap();
