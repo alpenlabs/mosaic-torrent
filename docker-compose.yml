@@ -1,0 +1,24 @@
+services:
+  transmission:
+    image: lscr.io/linuxserver/transmission:4.0.6
+    container_name: transmission
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+     # - TRANSMISSION_WEB_HOME= #optional
+    #  - USER= #optional
+    #  - PASS= #optional
+      - WHITELIST=*.*.*.* #optional
+      - PEERPORT= #optional
+      - HOST_WHITELIST= #optional
+    volumes:
+      - /home/eloylp/test/transmission/data:/config
+      - /home/eloylp/test/downloads:/downloads #optional
+      - /home/eloylp/test/watch:/watch #optional
+      - /testdata:/testdata #optional
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    restart: unless-stopped

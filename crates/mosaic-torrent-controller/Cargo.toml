@@ -26,3 +26,4 @@ mockall = "0.14"
 tempfile = "3.23"
 tokio = { version = "1.48", features = ["full"] }
 env_logger = "0.11"
+test-log = "0.2.19"
