@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum BitTorrentError {
     /// Network-related errors (connection failures, timeouts, etc.)
-    #[error("network error: {0}")]
+    #[error("network: {0}")]
     Network(String),
 
     /// Authentication errors
@@ -17,7 +17,7 @@ pub enum BitTorrentError {
     Unauthorized,
 
     /// Server returned an error response
-    #[error("server error: {0}")]
+    #[error("server: {0}")]
     ServerError(String),
 
     /// Invalid torrent file or data
@@ -25,11 +25,11 @@ pub enum BitTorrentError {
     InvalidTorrent(String),
 
     /// File system errors (file not found, permission denied, etc.)
-    #[error("file system error: {0}")]
+    #[error("file system: {0}")]
     FileSystem(String),
 
     /// Other unexpected errors
-    #[error("unexpected error: {0}")]
+    #[error("unexpected: {0}")]
     Other(String),
 }
 
