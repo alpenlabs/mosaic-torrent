@@ -23,13 +23,9 @@ pub struct TransmissionClient<T: TransmissionOps = Client> {
 impl TransmissionClient {
     /// Create a new TransmissionClient.
     ///
-    /// If no RPC URL is provided, it defaults to `http://localhost:9091/transmission/rpc`.
     /// This method is async as the session settings are applied on creation.
-    pub async fn try_new(
-        rpc_url: Option<&str>,
-        max_downloads: u32,
-    ) -> Result<Self, BitTorrentError> {
-        let url = Url::parse(rpc_url.unwrap_or("http://localhost:9091/transmission/rpc"))
+    pub async fn try_new(rpc_url: &str, max_downloads: u32) -> Result<Self, BitTorrentError> {
+        let url = Url::parse(rpc_url)
             .map_err(|e| BitTorrentError::Other(format!("Invalid RPC URL: {}", e)))?;
 
         debug!("Connecting to Transmission RPC at {}", url);

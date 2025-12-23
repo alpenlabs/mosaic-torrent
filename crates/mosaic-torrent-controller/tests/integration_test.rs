@@ -149,7 +149,9 @@ async fn integration_test() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", 9091, std::time::Duration::from_secs(5))?;
 
     debug!("Transmission daemon started with PID {}", guard.pid);
-    let client = TransmissionClient::try_new(None, 2).await.unwrap();
+    let client = TransmissionClient::try_new("http://localhost:9091/transmission/rpc", 2)
+        .await
+        .unwrap();
     let _ = client.add("assets/test_folder.torrent").await.unwrap();
     let torrents = client.list().await.unwrap();
     assert_eq!(torrents.len(), 1);
@@ -177,8 +179,7 @@ async fn integration_test_connection_refused() {
     init_test_tracing();
 
     // Try to connect to a port where no daemon is running
-    let result =
-        TransmissionClient::try_new(Some("http://127.0.0.1:19999/transmission/rpc"), 2).await;
+    let result = TransmissionClient::try_new("http://127.0.0.1:19999/transmission/rpc", 2).await;
 
     match result {
         Err(mosaic_torrent_types::BitTorrentError::Network(msg)) => {
@@ -198,7 +199,7 @@ async fn integration_test_connection_refused() {
 async fn integration_test_invalid_rpc_url() {
     init_test_tracing();
 
-    let result = TransmissionClient::try_new(Some("not-a-valid-url"), 2).await;
+    let result = TransmissionClient::try_new("not-a-valid-url", 2).await;
 
     match result {
         Err(mosaic_torrent_types::BitTorrentError::Other(msg)) => {
@@ -237,7 +238,7 @@ async fn integration_test_add_nonexistent_torrent() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
@@ -283,7 +284,7 @@ async fn integration_test_add_invalid_torrent_content() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
@@ -326,7 +327,7 @@ async fn integration_test_peers_nonexistent_torrent() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
@@ -373,7 +374,7 @@ async fn integration_test_stop_nonexistent_torrent() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
@@ -411,7 +412,7 @@ async fn integration_test_remove_nonexistent_torrent() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
@@ -449,7 +450,7 @@ async fn integration_test_list_empty() -> std::io::Result<()> {
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
     let rpc_url = format!("http://127.0.0.1:{}/transmission/rpc", port);
-    let client = TransmissionClient::try_new(Some(&rpc_url), 2)
+    let client = TransmissionClient::try_new(rpc_url.as_str(), 2)
         .await
         .unwrap();
 
