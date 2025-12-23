@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+# --- Build image with Rust toolchain and dependencies
+FROM rust:1.90-slim AS builder
+
+# Install common build dependencies (openssl, pkg-config, build-essential)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       pkg-config \
+       libssl-dev \
+       ca-certificates \
+       git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create workdir
+WORKDIR /usr/src/mosaic-torrent
+
+# Copy full workspace (simple approach; relies on Docker cache)
+COPY . .
+
+# Pre-fetch dependencies to warm cache
+RUN cargo fetch
+
+# Optionally build to verify compilation ahead of running tests
+# RUN cargo build --all --release
+
+# --- Runtime stage (can reuse builder to keep toolchain available for cargo test)
+FROM builder AS runner
+
+WORKDIR /usr/src/mosaic-torrent
+
+# Default environment for better diagnostics
+ENV RUST_BACKTRACE=1
+
+# Default command runs the specific integration test
+# Compose can override this command; keeping a sensible default here.
+CMD ["bash", "-lc", "RUST_BACKTRACE=1 cargo test transmission_controller_chained_flow"]

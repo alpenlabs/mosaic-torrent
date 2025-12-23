@@ -197,6 +197,7 @@ mod tests {
         super::create_torrent_file(
             "target/test_data/create_torrent",
             "target/test_data/create_torrent/test.torrent",
+            None
         )?;
         assert!(std::path::Path::new("target/test_data/create_torrent/test.torrent").exists());
         std::fs::remove_dir_all("target/test_data/create_torrent").unwrap();

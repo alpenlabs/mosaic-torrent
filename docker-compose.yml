@@ -6,9 +6,9 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-     # - TRANSMISSION_WEB_HOME= #optional
-    #  - USER= #optional
-    #  - PASS= #optional
+      # - TRANSMISSION_WEB_HOME= #optional
+      #  - USER= #optional
+      #  - PASS= #optional
       - WHITELIST=*.*.*.* #optional
       - PEERPORT= #optional
       - HOST_WHITELIST= #optional
@@ -22,3 +22,18 @@ services:
       - 51413:51413
       - 51413:51413/udp
     restart: unless-stopped
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    container_name: mosaic-torrent-tests
+    environment:
+      - RUST_BACKTRACE=1
+      - TRANSMISSION_RPC_URL=http://transmission:9091/transmission/rpc
+      - TRANSMISSION_MAX_DOWNLOADS=1
+    volumes:
+      - /testdata:/testdata #optional
+    depends_on:
+      - transmission
+    command: ["cargo", "test", "transmission_controller_chained_flow"]

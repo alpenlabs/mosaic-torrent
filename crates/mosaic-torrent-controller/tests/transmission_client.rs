@@ -46,6 +46,7 @@ fn prepare_test_workspace() -> (PathBuf, PathBuf) {
     create_torrent_file(
         folder.to_string_lossy().as_ref(),
         torrent_file.to_string_lossy().as_ref(),
+        None
     )
     .expect("failed to create sample torrent");
 
