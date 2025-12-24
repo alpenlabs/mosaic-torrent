@@ -18,7 +18,13 @@ struct ForkingDaemonGuard {
 }
 
 impl ForkingDaemonGuard {
-    fn start_transmission(pidfile: PathBuf, extra_args: &[&str]) -> io::Result<Self> {
+    fn start_transmission(extra_args: &[&str]) -> io::Result<Self> {
+        let tmp = tempfile::tempdir()?;
+        let pidfile = tmp.path().join("transmission.pid");
+        let download_dir = tmp.path().join("complete");
+        let incomplete_dir = tmp.path().join("incomplete");
+        let config_dir = tmp.path().join("config");
+
         let mut args: Vec<&str> = Vec::with_capacity(2 + extra_args.len());
         args.push("-x");
         let pidfile_str = pidfile
@@ -29,6 +35,12 @@ impl ForkingDaemonGuard {
         let mut cmd = Command::new("transmission-daemon");
         cmd.arg("-x")
             .arg(&pidfile_str)
+            .arg("-w")
+            .arg(download_dir.to_str().unwrap())
+            .arg("--incomplete-dir")
+            .arg(incomplete_dir.to_str().unwrap())
+            .arg("--config-dir")
+            .arg(config_dir.to_str().unwrap())
             .args(extra_args)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -131,22 +143,7 @@ async fn integration_test() -> std::io::Result<()> {
 
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
-    let incomplete_dir = tmp.path().join("incomplete");
-
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-p",
-            "9091",
-            "-w",
-            download_dir.to_str().unwrap(),
-            "--incomplete-dir",
-            incomplete_dir.to_str().unwrap(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", "9091"])?;
 
     guard.wait_tcp_ready("127.0.0.1", 9091, std::time::Duration::from_secs(5))?;
 
@@ -222,20 +219,8 @@ async fn invalid_rpc_url() {
 async fn add_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
     let port = 9092;
-
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
@@ -264,24 +249,13 @@ async fn add_nonexistent_torrent() -> std::io::Result<()> {
 async fn add_invalid_torrent_content() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
-    let port = 9093;
-
     // Create an invalid torrent file with garbage content
+    let tmp = tempfile::tempdir()?;
     let invalid_torrent_path = tmp.path().join("invalid.torrent");
     fs::write(&invalid_torrent_path, "this is not valid bencode data")?;
 
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let port = 9093;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
@@ -311,20 +285,8 @@ async fn add_invalid_torrent_content() -> std::io::Result<()> {
 async fn peers_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
     let port = 9094;
-
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
@@ -358,20 +320,8 @@ async fn peers_nonexistent_torrent() -> std::io::Result<()> {
 async fn stop_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
     let port = 9095;
-
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
@@ -396,20 +346,9 @@ async fn stop_nonexistent_torrent() -> std::io::Result<()> {
 async fn remove_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
     let port = 9096;
 
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
@@ -434,20 +373,9 @@ async fn remove_nonexistent_torrent() -> std::io::Result<()> {
 async fn list_empty() -> std::io::Result<()> {
     init_test_tracing();
 
-    let tmp = tempfile::tempdir()?;
-    let pidfile = tmp.path().join("transmission.pid");
-    let download_dir = tmp.path().join("complete");
     let port = 9097;
 
-    let guard = ForkingDaemonGuard::start_transmission(
-        pidfile,
-        &[
-            "-w",
-            download_dir.to_str().unwrap(),
-            "-p",
-            &port.to_string(),
-        ],
-    )?;
+    let guard = ForkingDaemonGuard::start_transmission(&["-p", &port.to_string()])?;
 
     guard.wait_tcp_ready("127.0.0.1", port, std::time::Duration::from_secs(5))?;
 
