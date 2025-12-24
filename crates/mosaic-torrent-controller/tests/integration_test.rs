@@ -124,7 +124,7 @@ fn init_test_tracing() {
 
 /// Happy path integration test: start a Transmission daemon, add a torrent,
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
+#[tokio::test]
 async fn integration_test() -> std::io::Result<()> {
     use tokio::time::sleep;
     use tracing::debug;
@@ -134,11 +134,13 @@ async fn integration_test() -> std::io::Result<()> {
     let tmp = tempfile::tempdir()?;
     let pidfile = tmp.path().join("transmission.pid");
     let download_dir = tmp.path().join("complete");
-    let incomplete_dir = tmp.path().join("complete");
+    let incomplete_dir = tmp.path().join("incomplete");
 
     let guard = ForkingDaemonGuard::start_transmission(
         pidfile,
         &[
+            "-p",
+            "9091",
             "-w",
             download_dir.to_str().unwrap(),
             "--incomplete-dir",
@@ -174,8 +176,8 @@ async fn integration_test() -> std::io::Result<()> {
 }
 
 /// Test that connecting to a non-existent daemon fails with a network error.
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_connection_refused() {
+#[tokio::test]
+async fn connection_refused() {
     init_test_tracing();
 
     // Try to connect to a port where no daemon is running
@@ -195,8 +197,8 @@ async fn integration_test_connection_refused() {
 }
 
 /// Test that an invalid RPC URL is rejected.
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_invalid_rpc_url() {
+#[tokio::test]
+async fn invalid_rpc_url() {
     init_test_tracing();
 
     let result = TransmissionClient::try_new("not-a-valid-url", 2).await;
@@ -216,8 +218,8 @@ async fn integration_test_invalid_rpc_url() {
 
 /// Test adding a non-existent torrent file fails.
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_add_nonexistent_torrent() -> std::io::Result<()> {
+#[tokio::test]
+async fn add_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
@@ -258,8 +260,8 @@ async fn integration_test_add_nonexistent_torrent() -> std::io::Result<()> {
 
 /// Test adding an invalid/corrupt torrent file fails.
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_add_invalid_torrent_content() -> std::io::Result<()> {
+#[tokio::test]
+async fn add_invalid_torrent_content() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
@@ -305,8 +307,8 @@ async fn integration_test_add_invalid_torrent_content() -> std::io::Result<()> {
 
 /// Test getting peers for a non-existent torrent ID fails.
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_peers_nonexistent_torrent() -> std::io::Result<()> {
+#[tokio::test]
+async fn peers_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
@@ -352,8 +354,8 @@ async fn integration_test_peers_nonexistent_torrent() -> std::io::Result<()> {
 /// Test that stopping a non-existent torrent hash doesn't cause an error
 /// (Transmission silently ignores unknown hashes).
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_stop_nonexistent_torrent() -> std::io::Result<()> {
+#[tokio::test]
+async fn stop_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
@@ -390,8 +392,8 @@ async fn integration_test_stop_nonexistent_torrent() -> std::io::Result<()> {
 /// Test that removing a non-existent torrent hash doesn't cause an error
 /// (Transmission silently ignores unknown hashes).
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_remove_nonexistent_torrent() -> std::io::Result<()> {
+#[tokio::test]
+async fn remove_nonexistent_torrent() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
@@ -428,8 +430,8 @@ async fn integration_test_remove_nonexistent_torrent() -> std::io::Result<()> {
 
 /// Test listing torrents when none exist returns empty list.
 #[cfg(unix)]
-#[tokio::test(flavor = "current_thread")]
-async fn integration_test_list_empty() -> std::io::Result<()> {
+#[tokio::test]
+async fn list_empty() -> std::io::Result<()> {
     init_test_tracing();
 
     let tmp = tempfile::tempdir()?;
