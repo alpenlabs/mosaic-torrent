@@ -22,6 +22,12 @@ Once configured, you can run the following command to mount the filesystem:
 ```sh
 cargo run --release -- --mount-path /path/to/mount
 ```
+An **important note**, if you are planning to share the mount point with a container,
+the `allow_others` option must be specified:
+
+```sh
+cargo run --release -- --mount-path /path/to/mount --allow-other
+```
 
 This will mount the S3 bucket at `/path/to/mount`.
 
