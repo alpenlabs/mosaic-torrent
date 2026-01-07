@@ -38,6 +38,116 @@ struct Cli {
     /// Whether to use an in-memory operator instead of an actual S3 operator, for testing
     #[arg(long, hide = true)]
     in_memory: bool,
+
+    /// FUSE mount options
+    #[command(flatten)]
+    mount: CliMountOptions,
+}
+
+/// CLI representation of FUSE mount options.
+#[derive(Debug, Clone, Default, clap::Args)]
+struct CliMountOptions {
+    /// Allow other users to access the mount (maps to allow_other)
+    #[arg(long, default_value_t = true)]
+    allow_other: bool,
+
+    /// Allow root to access the mount (maps to allow_root)
+    #[arg(long, default_value_t = false)]
+    allow_root: bool,
+
+    /// Mount read-only (maps to read_only)
+    #[arg(long, default_value_t = false)]
+    read_only: bool,
+
+    /// Allow mount on a non-empty directory (maps to nonempty)
+    #[arg(long, default_value_t = false)]
+    nonempty: bool,
+
+    /// Enforce kernel default permissions (maps to default_permissions)
+    #[arg(long, default_value_t = false)]
+    default_permissions: bool,
+
+    /// Filesystem name (maps to fs_name)
+    #[arg(long)]
+    fs_name: Option<String>,
+
+    /// User ID to mount as (maps to uid)
+    #[arg(long)]
+    uid: Option<u32>,
+
+    /// Group ID to mount as (maps to gid)
+    #[arg(long)]
+    gid: Option<u32>,
+
+    /// Don't apply umask on create (maps to dont_mask)
+    #[arg(long, default_value_t = false)]
+    dont_mask: bool,
+
+    /// Disable open support (maps to no_open_support)
+    #[arg(long, default_value_t = false)]
+    no_open_support: bool,
+
+    /// Disable opendir support (maps to no_open_dir_support)
+    #[arg(long, default_value_t = false)]
+    no_open_dir_support: bool,
+
+    /// Handle killpriv on write/chown/trunc (maps to handle_killpriv)
+    #[arg(long, default_value_t = false)]
+    handle_killpriv: bool,
+
+    /// Enable write-back cache (maps to write_back)
+    #[arg(long, default_value_t = false)]
+    write_back: bool,
+
+    /// Force readdir plus (maps to force_readdir_plus)
+    #[arg(long, default_value_t = false)]
+    force_readdir_plus: bool,
+
+    /// Root inode mode (Linux only) (maps to rootmode)
+    #[cfg(target_os = "linux")]
+    #[arg(long)]
+    rootmode: Option<u32>,
+
+    /// Extra custom FUSE options (comma-separated)
+    #[arg(long)]
+    custom_options: Option<String>,
+}
+
+impl From<CliMountOptions> for fuse3::MountOptions {
+    fn from(cli: CliMountOptions) -> Self {
+        let mut m = fuse3::MountOptions::default();
+        // bool toggles
+        m.allow_other(cli.allow_other);
+        m.allow_root(cli.allow_root);
+        m.read_only(cli.read_only);
+        m.nonempty(cli.nonempty);
+        m.default_permissions(cli.default_permissions);
+        m.dont_mask(cli.dont_mask);
+        m.no_open_support(cli.no_open_support);
+        m.no_open_dir_support(cli.no_open_dir_support);
+        m.handle_killpriv(cli.handle_killpriv);
+        m.write_back(cli.write_back);
+        m.force_readdir_plus(cli.force_readdir_plus);
+
+        // optional fields
+        if let Some(name) = cli.fs_name {
+            m.fs_name(name);
+        }
+        if let Some(uid) = cli.uid {
+            m.uid(uid);
+        }
+        if let Some(gid) = cli.gid {
+            m.gid(gid);
+        }
+        #[cfg(target_os = "linux")]
+        if let Some(rm) = cli.rootmode {
+            m.rootmode(rm);
+        }
+        if let Some(opts) = cli.custom_options {
+            m.custom_options(opts);
+        }
+        m
+    }
 }
 
 /// Initializes the tracing subscriber.
@@ -106,6 +216,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
     let config = OpenDALFuseConfiguration {
+        mount_options: cli.mount.into(),
         s3: S3Configuration::from_env(),
         ..Default::default()
     };
