@@ -48,7 +48,7 @@ struct Cli {
 #[derive(Debug, Clone, Default, clap::Args)]
 struct CliMountOptions {
     /// Allow other users to access the mount (maps to allow_other)
-    #[arg(long, default_value_t = true)]
+    #[arg(long, default_value_t = false)]
     allow_other: bool,
 
     /// Allow root to access the mount (maps to allow_root)
