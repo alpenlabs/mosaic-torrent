@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
     let config = OpenDALFuseConfiguration {
-        mount_options: cli.mount.into(),
+        mount_options: cli.mount_options.into(),
         s3: S3Configuration::from_env(),
         ..Default::default()
     };

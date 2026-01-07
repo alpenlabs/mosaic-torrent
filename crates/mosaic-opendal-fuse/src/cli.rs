@@ -8,6 +8,10 @@ pub(crate) struct Cli {
     #[arg(short = 'p', long)]
     pub mount_path: String,
 
+    /// FUSE mount options
+    #[command(flatten)]
+    pub mount_options: CliMountOptions,
+
     /// The path to listen on for socket connections
     #[arg(short, long, default_value = "/tmp/mosaic_opendal_fuse.sock")]
     pub socket: String,
@@ -15,10 +19,6 @@ pub(crate) struct Cli {
     /// Whether to use an in-memory operator instead of an actual S3 operator, for testing
     #[arg(long, hide = true)]
     pub in_memory: bool,
-
-    /// FUSE mount options
-    #[command(flatten)]
-    pub mount: CliMountOptions,
 }
 
 /// CLI representation of FUSE mount options.
