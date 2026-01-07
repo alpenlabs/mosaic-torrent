@@ -24,23 +24,23 @@ pub(crate) struct Cli {
 /// CLI representation of FUSE mount options.
 #[derive(Debug, Clone, Default, Args)]
 pub(crate) struct CliMountOptions {
-    /// Allow other users to access the mount (maps to allow_other)
+    /// Allow other users to access the mount.
     #[arg(long, default_value_t = false)]
     pub allow_other: bool,
 
-    /// Allow root to access the mount (maps to allow_root)
+    /// Allow root to access the mount.
     #[arg(long, default_value_t = false)]
     pub allow_root: bool,
 
-    /// Mount read-only (maps to read_only)
+    /// Mount read-only.
     #[arg(long, default_value_t = false)]
     pub read_only: bool,
 
-    /// Allow mount on a non-empty directory (maps to nonempty)
+    /// Allow mount on a non-empty directory.
     #[arg(long, default_value_t = false)]
     pub nonempty: bool,
 
-    /// Enforce kernel default permissions (maps to default_permissions)
+    /// Enforce kernel default permissions.
     #[arg(long, default_value_t = false)]
     pub default_permissions: bool,
 
@@ -56,36 +56,36 @@ pub(crate) struct CliMountOptions {
     #[arg(long)]
     pub gid: Option<u32>,
 
-    /// Don't apply umask on create (maps to dont_mask)
+    /// Don't apply umask on create
     #[arg(long, default_value_t = false)]
     pub dont_mask: bool,
 
-    /// Disable open support (maps to no_open_support)
+    /// Disable open support.
     #[arg(long, default_value_t = false)]
     pub no_open_support: bool,
 
-    /// Disable opendir support (maps to no_open_dir_support)
+    /// Disable opendir support.
     #[arg(long, default_value_t = false)]
     pub no_open_dir_support: bool,
 
-    /// Handle killpriv on write/chown/trunc (maps to handle_killpriv)
+    /// Handle killpriv on write/chown/trunc.
     #[arg(long, default_value_t = false)]
     pub handle_killpriv: bool,
 
-    /// Enable write-back cache (maps to write_back)
+    /// Enable write-back cache.
     #[arg(long, default_value_t = false)]
     pub write_back: bool,
 
-    /// Force readdir plus (maps to force_readdir_plus)
+    /// Force readdir plus.
     #[arg(long, default_value_t = false)]
     pub force_readdir_plus: bool,
 
-    /// Root inode mode (Linux only) (maps to rootmode)
+    /// Root inode mode (Linux only).
     #[cfg(target_os = "linux")]
     #[arg(long)]
     pub rootmode: Option<u32>,
 
-    /// Extra custom FUSE options (comma-separated)
+    /// Extra custom FUSE options.
     #[arg(long)]
     pub custom_options: Option<String>,
 }
