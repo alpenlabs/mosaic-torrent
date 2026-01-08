@@ -11,7 +11,6 @@ use std::{fs, path::Path};
 use clap::Parser;
 use fuse3::raw::MountHandle;
 use fuse3_opendal as _;
-use nix as _;
 use opendal::{Operator, services::Memory};
 use thiserror as _;
 use tokio::{
@@ -91,11 +90,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
+    let uid = cli.mount_options.uid;
+    let gid = cli.mount_options.gid;
     let config = OpenDALFuseConfiguration {
         mount_options: cli.mount_options.into(),
         s3: S3Configuration::from_env(),
-        ..Default::default()
     };
+
+    info!("Starting with config: {}", config);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
@@ -104,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         S3OpenDALFuseAdapter::new(config)?
     };
 
-    let mut mount_handle = adapter.start_session(cli.mount_path).await?;
+    let mut mount_handle = adapter.start_session(&cli.mount_path, uid, gid).await?;
     let handle = &mut mount_handle;
 
     // If some sockets fail to spawn, we need to clean up the mount point.

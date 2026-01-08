@@ -1,4 +1,5 @@
 use clap::{Args, Parser};
+use nix::unistd::{Gid, Uid};
 
 /// Top-level CLI struct for the binary.
 #[derive(Debug, Parser)]
@@ -48,13 +49,13 @@ pub(crate) struct CliMountOptions {
     #[arg(long)]
     pub fs_name: Option<String>,
 
-    /// User ID to mount as (maps to uid)
-    #[arg(long)]
-    pub uid: Option<u32>,
+    /// User ID to mount as. Defaults to current user.
+    #[arg(long, default_value_t = default_uid())]
+    pub uid: u32,
 
-    /// Group ID to mount as (maps to gid)
-    #[arg(long)]
-    pub gid: Option<u32>,
+    /// Group ID to mount as. Defaults to current user's primary group ID.
+    #[arg(long, default_value_t = default_gid())]
+    pub gid: u32,
 
     /// Don't apply umask on create
     #[arg(long, default_value_t = false)]
@@ -110,12 +111,8 @@ impl From<CliMountOptions> for fuse3::MountOptions {
         if let Some(name) = cli.fs_name {
             m.fs_name(name);
         }
-        if let Some(uid) = cli.uid {
-            m.uid(uid);
-        }
-        if let Some(gid) = cli.gid {
-            m.gid(gid);
-        }
+        m.uid(cli.uid);
+        m.gid(cli.gid);
         #[cfg(target_os = "linux")]
         if let Some(rm) = cli.rootmode {
             m.rootmode(rm);
@@ -125,4 +122,12 @@ impl From<CliMountOptions> for fuse3::MountOptions {
         }
         m
     }
+}
+
+fn default_uid() -> u32 {
+    Uid::current().as_raw()
+}
+
+fn default_gid() -> u32 {
+    Gid::current().as_raw()
 }
