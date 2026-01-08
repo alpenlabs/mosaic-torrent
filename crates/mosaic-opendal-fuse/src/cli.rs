@@ -48,7 +48,7 @@ pub(crate) struct CliMountOptions {
     #[arg(long, default_value_t = false)]
     pub default_permissions: bool,
 
-    /// Filesystem name (maps to fs_name)
+    /// Filesystem name
     #[arg(long)]
     pub fs_name: Option<String>,
 
