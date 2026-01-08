@@ -21,9 +21,10 @@ use tokio::{
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
-use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFuseAdapter};
-mod cli;
 use cli::Cli;
+use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFuseAdapter};
+
+mod cli;
 
 /// Initializes the tracing subscriber.
 fn init_tracing() {
