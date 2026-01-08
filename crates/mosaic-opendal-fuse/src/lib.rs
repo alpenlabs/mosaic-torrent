@@ -47,7 +47,7 @@ pub enum Error {
 }
 
 /// Configuration for the S3 service.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct S3Configuration {
     /// The root directory for S3.
     pub root: String,
@@ -77,7 +77,7 @@ impl S3Configuration {
     }
 }
 
-impl fmt::Display for S3Configuration {
+impl fmt::Debug for S3Configuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let access_key_set = !self.access_key.is_empty();
         let secret_key_set = !self.secret_key.is_empty();
@@ -105,7 +105,7 @@ impl fmt::Display for S3Configuration {
 }
 
 /// Configuration for the [`S3OpenDALFuseAdapter`].
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {
     /// The options for mounting the fuse3 file system.
     pub mount_options: MountOptions,
@@ -113,11 +113,11 @@ pub struct OpenDALFuseConfiguration {
     pub s3: S3Configuration,
 }
 
-impl fmt::Display for OpenDALFuseConfiguration {
+impl fmt::Debug for OpenDALFuseConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "OpenDALFuse(mount_options={:?}, s3={})",
+            "OpenDALFuse(mount_options={:?}, s3={:?})",
             self.mount_options, self.s3
         )
     }

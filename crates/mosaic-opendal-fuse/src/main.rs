@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         s3: S3Configuration::from_env(),
     };
 
-    info!("Starting with config: {}", config);
+    info!("Starting with config: {:?}", config);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
