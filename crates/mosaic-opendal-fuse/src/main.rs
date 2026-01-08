@@ -90,11 +90,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
+    let s3_config = S3Configuration::from_env();
+    println!("{}", s3_config);
+    println!("{}", cli.mount_options);
+
     let uid = cli.mount_options.uid;
     let gid = cli.mount_options.gid;
     let config = OpenDALFuseConfiguration {
         mount_options: cli.mount_options.into(),
-        s3: S3Configuration::from_env(),
+        s3: s3_config,
     };
 
     info!("Starting with config: {:?}", config);

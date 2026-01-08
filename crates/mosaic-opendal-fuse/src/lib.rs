@@ -104,6 +104,39 @@ impl fmt::Debug for S3Configuration {
     }
 }
 
+impl fmt::Display for S3Configuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let access_key_set = !self.access_key.is_empty();
+        let secret_key_set = !self.secret_key.is_empty();
+
+        // Never print credentials.
+        writeln!(f, "  S3 config")?;
+        writeln!(f, "  ----------")?;
+        writeln!(f, "  root: {}", self.root)?;
+        writeln!(f, "  bucket: {}", self.bucket)?;
+        writeln!(f, "  region: {}", self.region)?;
+        writeln!(f, "  endpoint: {}", self.endpoint)?;
+        writeln!(
+            f,
+            "  access_key: {}",
+            if access_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            }
+        )?;
+        writeln!(
+            f,
+            "  secret_key: {}",
+            if secret_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            }
+        )
+    }
+}
+
 /// Configuration for the [`S3OpenDALFuseAdapter`].
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {

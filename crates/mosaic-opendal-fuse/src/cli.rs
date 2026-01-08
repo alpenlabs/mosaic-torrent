@@ -1,3 +1,6 @@
+use core::fmt;
+use std::fmt::Display;
+
 use clap::{Args, Parser};
 use nix::unistd::{Gid, Uid};
 
@@ -121,6 +124,16 @@ impl From<CliMountOptions> for fuse3::MountOptions {
             m.custom_options(opts);
         }
         m
+    }
+}
+
+impl Display for CliMountOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, " Mount options")?;
+        writeln!(f, " -------------")?;
+        writeln!(f, " UID: {}", self.uid)?;
+        writeln!(f, " GID: {}", self.gid)?;
+        writeln!(f, " Allow other: {}", self.allow_other)
     }
 }
 
