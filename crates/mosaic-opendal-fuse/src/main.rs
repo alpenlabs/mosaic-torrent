@@ -18,7 +18,7 @@ use tokio::{
     signal::unix::{SignalKind, signal},
     task::JoinHandle,
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
 
 use cli::Cli;
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         s3: s3_config,
     };
 
-    info!("Starting with config: {:?}", config);
+    debug!("Starting with config: {:?}", config);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
