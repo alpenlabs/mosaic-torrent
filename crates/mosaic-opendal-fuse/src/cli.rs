@@ -97,7 +97,7 @@ pub(crate) struct CliMountOptions {
 impl From<CliMountOptions> for fuse3::MountOptions {
     fn from(cli: CliMountOptions) -> Self {
         let mut m = fuse3::MountOptions::default();
-        // bool toggles
+
         m.allow_other(cli.allow_other);
         m.allow_root(cli.allow_root);
         m.read_only(cli.read_only);
@@ -110,7 +110,6 @@ impl From<CliMountOptions> for fuse3::MountOptions {
         m.write_back(cli.write_back);
         m.force_readdir_plus(cli.force_readdir_plus);
 
-        // optional fields
         if let Some(name) = cli.fs_name {
             m.fs_name(name);
         }
