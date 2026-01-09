@@ -110,15 +110,15 @@ impl fmt::Display for S3Configuration {
         let secret_key_set = !self.secret_key.is_empty();
 
         // Never print credentials.
-        writeln!(f, "  S3 config")?;
-        writeln!(f, "  ----------")?;
-        writeln!(f, "  root: {}", self.root)?;
-        writeln!(f, "  bucket: {}", self.bucket)?;
-        writeln!(f, "  region: {}", self.region)?;
-        writeln!(f, "  endpoint: {}", self.endpoint)?;
+        writeln!(f, " S3 config")?;
+        writeln!(f, " ---------")?;
+        writeln!(f, " root: {}", self.root)?;
+        writeln!(f, " bucket: {}", self.bucket)?;
+        writeln!(f, " region: {}", self.region)?;
+        writeln!(f, " endpoint: {}", self.endpoint)?;
         writeln!(
             f,
-            "  access_key: {}",
+            " access_key: {}",
             if access_key_set {
                 "set"
             } else {
@@ -127,7 +127,7 @@ impl fmt::Display for S3Configuration {
         )?;
         writeln!(
             f,
-            "  secret_key: {}",
+            " secret_key: {}",
             if secret_key_set {
                 "set"
             } else {
