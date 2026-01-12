@@ -23,7 +23,7 @@ use clap as _;
 use dotenvy as _;
 use fuse3::{MountOptions, path::Session, raw::MountHandle};
 use fuse3_opendal::Filesystem;
-use nix::unistd::{Gid, Uid};
+use nix as _;
 use opendal::{Operator, services::S3};
 use thiserror::Error;
 use tokio as _;
@@ -47,7 +47,7 @@ pub enum Error {
 }
 
 /// Configuration for the S3 service.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct S3Configuration {
     /// The root directory for S3.
     pub root: String,
@@ -77,37 +77,83 @@ impl S3Configuration {
     }
 }
 
-/// The strategy to use for resolving which unix IDs to mount with.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum IDStrategy {
-    /// Inherits the ID from the parent process.
-    #[default]
-    Inherit,
-    /// Uses a custom user-provided ID.
-    Custom(u32),
+impl fmt::Debug for S3Configuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let access_key_set = !self.access_key.is_empty();
+        let secret_key_set = !self.secret_key.is_empty();
+
+        // Never print credentials.
+        write!(
+            f,
+            "S3(root=\"{}\", bucket=\"{}\", region=\"{}\", endpoint=\"{}\", access_key=<{}>, secret_key=<{}>)",
+            self.root,
+            self.bucket,
+            self.region,
+            self.endpoint,
+            if access_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            },
+            if secret_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            },
+        )
+    }
 }
 
-impl fmt::Display for IDStrategy {
+impl fmt::Display for S3Configuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            IDStrategy::Inherit => "inherit".to_string(),
-            IDStrategy::Custom(id) => format!("custom: {id}"),
-        };
-        write!(f, "{s}")
+        let access_key_set = !self.access_key.is_empty();
+        let secret_key_set = !self.secret_key.is_empty();
+
+        // Never print credentials.
+        writeln!(f, " S3 config")?;
+        writeln!(f, " ---------")?;
+        writeln!(f, " root: {}", self.root)?;
+        writeln!(f, " bucket: {}", self.bucket)?;
+        writeln!(f, " region: {}", self.region)?;
+        writeln!(f, " endpoint: {}", self.endpoint)?;
+        writeln!(
+            f,
+            " access_key: {}",
+            if access_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            }
+        )?;
+        writeln!(
+            f,
+            " secret_key: {}",
+            if secret_key_set {
+                "set"
+            } else {
+                "unset ⚠️"
+            }
+        )
     }
 }
 
 /// Configuration for the [`S3OpenDALFuseAdapter`].
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct OpenDALFuseConfiguration {
     /// The options for mounting the fuse3 file system.
     pub mount_options: MountOptions,
-    /// The user identifier.
-    pub uid: IDStrategy,
-    /// The group identifier.
-    pub gid: IDStrategy,
     /// The config for the S3 service.
     pub s3: S3Configuration,
+}
+
+impl fmt::Debug for OpenDALFuseConfiguration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "OpenDALFuse(mount_options={:?}, s3={:?})",
+            self.mount_options, self.s3
+        )
+    }
 }
 
 /// A fuse3 file system adapter for the OpenDAL operator.
@@ -154,11 +200,6 @@ impl S3OpenDALFuseAdapter {
     /// [`S3OpenDALFuseAdapter::new`] instead.
     #[doc(hidden)]
     pub fn new_with_operator(config: OpenDALFuseConfiguration, operator: Operator) -> Self {
-        info!(
-            uid = %config.uid,
-            gid = %config.gid,
-            "Creating S3OpenDALFuseAdapter with configuration"
-        );
         Self { config, operator }
     }
 
@@ -172,6 +213,8 @@ impl S3OpenDALFuseAdapter {
     pub async fn start_session<S: Into<String> + fmt::Display + fmt::Debug>(
         self,
         mount_directory: S,
+        uid: u32,
+        gid: u32,
     ) -> Result<MountHandle, Error> {
         let mount_directory = mount_directory.into();
         info!("Creating mount directory at {}", mount_directory);
@@ -179,16 +222,6 @@ impl S3OpenDALFuseAdapter {
             error!("Failed to create mount directory: {}", e);
             Error::Io(e.to_string())
         })?;
-
-        // Resolve unix IDs based on the configured strategy.
-        let uid = match self.config.uid {
-            IDStrategy::Inherit => Uid::current().as_raw(),
-            IDStrategy::Custom(uid) => uid,
-        };
-        let gid = match self.config.gid {
-            IDStrategy::Inherit => Gid::current().as_raw(),
-            IDStrategy::Custom(gid) => gid,
-        };
 
         let filesystem = Filesystem::new(self.operator, uid, gid);
 
@@ -224,7 +257,7 @@ mod tests {
         let config = OpenDALFuseConfiguration::default();
         let operator = Operator::new(Memory::default()).unwrap().finish();
         let adapter = S3OpenDALFuseAdapter::new_with_operator(config, operator);
-        let handle = adapter.start_session(TEST_MOUNT_DIR).await.unwrap();
+        let handle = adapter.start_session(TEST_MOUNT_DIR, 0, 0).await.unwrap();
 
         tokio::time::sleep(UNMOUNT_DELAY).await;
         handle.unmount().await.unwrap();

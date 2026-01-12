@@ -11,7 +11,6 @@ use std::{fs, path::Path};
 use clap::Parser;
 use fuse3::raw::MountHandle;
 use fuse3_opendal as _;
-use nix as _;
 use opendal::{Operator, services::Memory};
 use thiserror as _;
 use tokio::{
@@ -19,26 +18,13 @@ use tokio::{
     signal::unix::{SignalKind, signal},
     task::JoinHandle,
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
 
+use cli::Cli;
 use mosaic_opendal_fuse::{OpenDALFuseConfiguration, S3Configuration, S3OpenDALFuseAdapter};
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    /// The path to mount the FUSE filesystem at.
-    #[arg(short = 'p', long)]
-    mount_path: String,
-
-    /// The path to listen on for socket connections
-    #[arg(short, long, default_value = "/tmp/mosaic_opendal_fuse.sock")]
-    socket: String,
-
-    /// Whether to use an in-memory operator instead of an actual S3 operator, for testing
-    #[arg(long, hide = true)]
-    in_memory: bool,
-}
+mod cli;
 
 /// Initializes the tracing subscriber.
 fn init_tracing() {
@@ -105,10 +91,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let cli = Cli::parse();
+    let s3_config = S3Configuration::from_env();
+    println!("{}", s3_config);
+    println!("{}", cli.mount_options);
+
+    let uid = cli.mount_options.uid;
+    let gid = cli.mount_options.gid;
     let config = OpenDALFuseConfiguration {
-        s3: S3Configuration::from_env(),
-        ..Default::default()
+        mount_options: cli.mount_options.into(),
+        s3: s3_config,
     };
+
+    debug!("Starting with config: {:?}", config);
 
     let adapter = if cli.in_memory {
         let operator = Operator::new(Memory::default())?.finish();
@@ -117,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         S3OpenDALFuseAdapter::new(config)?
     };
 
-    let mut mount_handle = adapter.start_session(cli.mount_path).await?;
+    let mut mount_handle = adapter.start_session(&cli.mount_path, uid, gid).await?;
     let handle = &mut mount_handle;
 
     // If some sockets fail to spawn, we need to clean up the mount point.

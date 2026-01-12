@@ -23,12 +23,22 @@ Once configured, you can run the following command to mount the filesystem:
 cargo run --release -- --mount-path /path/to/mount
 ```
 
+> [!NOTE]
+> If you are planning to share the mount point with a container,
+> the `allow_other` option must be specified:
+```sh
+cargo run --release -- --mount-path /path/to/mount --allow-other
+```
+
 This will mount the S3 bucket at `/path/to/mount`.
 
 ### Command-line arguments
 
-- `--mount-path <PATH>`: The path to mount the FUSE filesystem at. If not specified, a temporary directory is used instead.
-- `--socket <PATH>`: The path to listen on for socket connections. Defaults to `/tmp/mosaic_opendal_fuse.sock`.
+Refer to
+```sh
+cargo run -- --help 
+```
+To get a list of all available options.
 
 ## Development
 
